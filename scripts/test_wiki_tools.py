@@ -60,6 +60,35 @@ class WikiTools(unittest.TestCase):
         self.write(".pm-toolkit-version", f"{version} 2026-01-02\n")
         self.assertFalse(self.status()["upgrade_pending"])
 
+    # raw-hits
+    def test_raw_hits_short_terms_match_whole_words(self):
+        self.write("wiki/raw/2026-10-03-neutral.md", "# Neutral memo\nThe team stayed neutral on zx-42.\n")
+        self.assertNotIn("neutral.md", self.run_wiki("raw-hits", "eu"))
+
+    def test_raw_hits_ranks_by_terms_matched_and_names_the_rest(self):
+        out = self.run_wiki("raw-hits", "eu", "backups", "--files", "2")
+        files = re.findall(r"^(wiki/raw/\S+)  \[", out, re.M)
+        self.assertEqual(len(files), 2)
+        self.assertTrue(all("(2 of the terms)" in l for l in out.splitlines() if l.startswith("wiki/raw/")))
+        more = re.search(r"^\+(\d+) more files: (.+)$", out, re.M)
+        self.assertTrue(more)
+        self.assertEqual(int(more.group(1)), len(more.group(2).split(", ")))
+        self.assertIn("2024-05-21-decision-eu-region-not-now.md", more.group(2))  # matches one term
+
+    def test_raw_hits_uses_glossary_synonyms(self):
+        self.write("wiki/raw/2026-10-03-ops.md", "# Ops\nThe Warehouse EU cut-over moved to 2027-02-01.\n")
+        self.assertIn("2026-10-03-ops.md", self.run_wiki("raw-hits", "fjord"))
+
+    def test_raw_hits_stoplist_and_skipped_files_and_pages(self):
+        self.write("wiki/raw/2026-10-03-guide.pdf", "%PDF-1.4 binary")
+        self.write("wiki/raw/2026-10-03-guide/part-01.md",
+                   "# Guide\n<!-- p.1 -->\nIntro.\n<!-- p.7 -->\nEU backups are kept for 35 days.\n"
+                   "EU support is generally whatever.\n")
+        out = self.run_wiki("raw-hits", "eu", "--files", "50")
+        self.assertIn("1 non-text raw file(s) not searched", out)
+        self.assertRegex(out, r"  5 p\.7: \(new: .*35")
+        self.assertIn("  6 p.7: (new: eu) EU support", out)  # stoplisted words aren't details
+
 
 if __name__ == "__main__":
     unittest.main()

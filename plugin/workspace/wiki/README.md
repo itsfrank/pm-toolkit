@@ -7,7 +7,9 @@ stay immutable, the agent writes and maintains the pages, and an index keeps rea
 ## Flow
 1. **Save** the document into `raw/` (export, copy-paste into `.md`, PDF, transcript).
    Name it `YYYY-MM-DD-short-title.ext`. From a connector (Confluence, Jira, docs), save
-   the content as markdown and record its URL, ID and version on the card.
+   the content as markdown and record its URL, ID and version on the card. Next to a PDF,
+   save its text as `raw/<same-name>/part-NN.md` with a `<!-- p.N -->` line where each page
+   starts (one card for the whole), so search hits carry a `p.N` locator.
 2. **Card** it: create `sources/S-NNNN.md` from `sources/_TEMPLATE.md`
    (`python3 tools/wiki.py next-id` gives the number). Conversations with no document get a
    card too: write the notes into `raw/` first.

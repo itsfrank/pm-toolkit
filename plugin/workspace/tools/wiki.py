@@ -6,7 +6,7 @@ Standard library only (Python 3.8+). Run from the workspace root or pass --root.
   python3 tools/wiki.py next-id
   python3 tools/wiki.py cards-from-raw [--dry-run] [FILE ...]
   python3 tools/wiki.py due [--today YYYY-MM-DD]
-  python3 tools/wiki.py raw-hits TERM [TERM ...] [--all]
+  python3 tools/wiki.py raw-hits TERM [TERM ...] [--all] [--files N]
   python3 tools/wiki.py catalog-search TERM [TERM ...] [--all] [--limit N]
   python3 tools/wiki.py catalog-mark ID_OR_URL S-NNNN
   python3 tools/wiki.py spend [--since ISO_TIME] [--marker TEXT] [--session FILE] [--json]
@@ -357,54 +357,79 @@ def cmd_spend(wiki, args):
 
 
 TOKEN = re.compile(r"[a-z0-9][a-z0-9.\-]*[a-z0-9]")
+TEXT = (".md", ".txt", ".csv", ".html", ".eml")
+PAGE = re.compile(r"^<!-- p\.(\d+) -->$")  # page marker in text parts of a PDF
+# Long words that are common in any document and carry no specific detail.
+STOP = set("""additional approximately available because business customers currently different
+everything following generally important including information otherwise possible probably
+question questions received processed something sometimes therefore together whatever
+whenever estimated unchanged downstream""".split())
 
 
 def distinctive(token):
     """Words that carry a specific detail: codes and numbers (us-east-1, 72, v3) or long
-    technical words. Short common words are ignored."""
-    return any(c.isdigit() for c in token) or "-" in token or len(token) >= 8
+    technical words. Short and common words are ignored."""
+    return any(c.isdigit() for c in token) or "-" in token or (len(token) >= 8 and token not in STOP)
+
+
+def term_pattern(term):
+    """Substring match, but whole words for short terms (so 'eu' doesn't match 'neutral')."""
+    t = re.escape(term)
+    return re.compile(rf"(?<![a-z0-9]){t}(?![a-z0-9])" if len(term) < 4 else t)
 
 
 def raw_hits(wiki, terms, show_all=False, per_file=8):
-    """Lines in raw files that match a term and say something the file's card and the pages
-    citing it never mention: the term itself, or a distinctive word (a region code, a number,
-    a long technical word). These are the details summaries most often drop."""
-    terms = [t.lower() for t in terms if len(t) >= 2]
+    """Lines in raw files that match a term (or its glossary synonyms) and say something the
+    file's card and the pages citing it never mention: the term itself, or a distinctive word
+    (a region code, a number, a long technical word). Files are ranked by how many of the
+    terms they match. Returns (rows, skipped non-text files)."""
+    groups = {t: [(a, term_pattern(a)) for a in aliases(wiki, [t])] for t in {t.lower() for t in terms if len(t) >= 2}}
     by_origin = {str(f.get("origin", "")): (sid, read(path).lower()) for sid, (path, f, _) in wiki.cards().items()}
     page_text = {p: read(p).lower() for p in wiki.pages()}
-    out = []
+    out, skipped = [], 0
     for raw in wiki.raw_files():
-        if raw.suffix.lower() not in (".md", ".txt", ".csv", ".html", ".eml"):
+        if raw.suffix.lower() not in TEXT:
+            skipped += 1
             continue
         sid, card = by_origin.get(wiki.rel(raw).replace("wiki/", "", 1), (None, ""))
         summaries = card + "".join(t for t in page_text.values() if sid and sid.lower() in t)
         known = set(TOKEN.findall(summaries))
-        hits = []
+        hits, found, page = [], set(), None
         for n, line in enumerate(read(raw).splitlines(), 1):
             low = line.lower()
-            matched = [t for t in terms if t in low]
+            marker = PAGE.match(low.strip())
+            page = int(marker.group(1)) if marker else page
+            matched = {g: [a for a, rx in alts if rx.search(low)] for g, alts in groups.items()}
+            matched = {g: a for g, a in matched.items() if a}
             if not matched:
                 continue
-            new = [t for t in matched if t not in summaries]
+            names = sorted({a for a in sum(matched.values(), [])})
+            new = [a for a in names if not term_pattern(a).search(summaries)]
             new += sorted({w for w in TOKEN.findall(low) if distinctive(w) and w not in known} - set(new))
             if new or show_all:
-                hits.append((n, new or matched, line.strip()))
+                hits.append((n, page, new or names, line.strip()))
+                found |= set(matched)
         if hits:
-            hits.sort(key=lambda h: -len(h[1]))
-            out.append((wiki.rel(raw), sid, sorted(hits[:per_file]), len(hits)))
-    return out
+            hits.sort(key=lambda h: -len(h[2]))
+            out.append((wiki.rel(raw), sid, sorted(hits[:per_file]), len(hits), len(found)))
+    out.sort(key=lambda r: (-r[4], r[0]))
+    return out, skipped
 
 
 def cmd_raw_hits(wiki, args):
-    rows = raw_hits(wiki, args.terms, args.all)
-    for path, sid, hits, total in rows:
-        print(f"{path}  [{sid or 'no card'}]")
-        for n, why, line in hits:
-            print(f"  {n}: (new: {', '.join(why[:6])}) {line[:160]}")
+    rows, skipped = raw_hits(wiki, args.terms, args.all)
+    for path, sid, hits, total, matched in rows[:args.files]:
+        print(f"{path}  [{sid or 'no card'}]  ({matched} of the terms)")
+        for n, page, why, line in hits:
+            print(f"  {n}{f' p.{page}' if page else ''}: (new: {', '.join(why[:6])}) {line[:160]}")
         if total > len(hits):
             print(f"  ... {total - len(hits)} more lines")
+    if len(rows) > args.files:
+        print(f"+{len(rows) - args.files} more files: " + ", ".join(r[0] for r in rows[args.files:]))
     print(f"{len(rows)} raw file(s) with details not in their card or pages"
           + (" (or matching, with --all)" if args.all else ""))
+    if skipped:
+        print(f"{skipped} non-text raw file(s) not searched (PDFs: search their text parts)")
 
 
 def anchor(wiki, note):
@@ -685,6 +710,7 @@ def main():
     p = sub.add_parser("raw-hits", help="raw lines matching terms that cards and pages don't mention")
     p.add_argument("terms", nargs="+")
     p.add_argument("--all", action="store_true", help="also show lines whose terms are summarized")
+    p.add_argument("--files", type=int, default=10, help="files to show; the rest are named")
     p.set_defaults(fn=cmd_raw_hits)
     p = sub.add_parser("catalog-search", help="find catalogued (not yet ingested) pages by terms and aliases")
     p.add_argument("terms", nargs="+")
