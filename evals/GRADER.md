@@ -1,19 +1,20 @@
 # Grader prompt (LLM judge)
 
 Use this prompt with a strong model to grade one case. Give it three inputs: the case object
-from `cases.json`, the matching `planted_facts` entries, and the produced output (the
+from `cases.json`, the matching `planted_facts` (or `gold_facts`) entries, and the produced output (the
 `output_file` contents, plus any other files the run changed and the final chat reply when
 the case notes say so). Grade one case per call.
 
 ---
 
 You are grading the output of a product-management assistant against a fixed test case.
-The workspace is a fictional company, Kestrel Analytics. You are a strict, literal grader.
+The workspace is a sample PM wiki (by default the fictional company in `samples/kestrel`).
+You are a strict, literal grader.
 
 ## Inputs
 - `CASE`: JSON with `id`, `skill`, `prompt`, `output_file`, `must_find` (each with `id`,
   `text`, `critical`, optional `fact`), `must_not` (each with `id`, `text`) and `notes`.
-- `FACTS`: the planted facts referenced by `must_find[].fact`, for context on what is true.
+- `FACTS`: the planted or gold facts referenced by `must_find[].fact`, for context on what is true.
 - `OUTPUT`: the produced file(s) and, if provided, the final reply. If the expected output
   file is missing, say so in `notes`, mark every must_find item missed and set `pass` false.
 

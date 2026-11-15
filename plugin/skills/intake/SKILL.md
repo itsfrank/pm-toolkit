@@ -20,8 +20,12 @@ Output: `work/<slug>/intake.md` and `work/<slug>/questions.md`.
 # Intake: <short title>
 ## The ask (verbatim)
 ## Interpretations
-2–4 plausible readings of what is being asked. For each: what it would mean to build, who it
-serves, rough size. Mark the one the evidence favors and why. Ask-as-solution check: if the
+2–4 plausible readings of what is being asked. Check each layer the ask could live at: our
+own operations or internal tooling, a customer-facing product capability, the platform or
+protocol level, and a compliance or standards obligation. Separate "we should do X" from
+"our product should support, show or manage X for customers"; for a PM, the second is often
+what's meant. Weight readings by what the PM's own product does (`about-me.md`, product
+pages). For each reading: what it would mean to build, who it serves, rough size. Mark the one the evidence favors and why. Ask-as-solution check: if the
 ask names a solution, state the problem it might be solving.
 ## Underlying problem hypotheses
 Who hurts, how we know (cite or label), what happens if nothing is done.

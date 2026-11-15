@@ -3,13 +3,14 @@
 
 Each case runs in a fresh copy of samples/kestrel with the skills copied into
 .claude/skills/, no web tools, and file edits limited to that copy. Results (output file,
-transcript, verdict JSON) go to evals/results/<timestamp>/ (gitignored).
+transcript, verdict JSON) go to results/<timestamp>/ next to the cases file.
 
 Usage:
   python3 scripts/run_evals.py                 # core cases
   python3 scripts/run_evals.py --all
   python3 scripts/run_evals.py --case rfp-halvard --case intake-eu-residency
-  python3 scripts/run_evals.py --model sonnet --strong-model opus --grader-model sonnet
+  python3 scripts/run_evals.py --model sonnet --strong-model opus --grader-model opus
+  python3 scripts/run_evals.py --sample path/to/workspace --cases path/to/cases.json
 """
 import argparse
 import concurrent.futures
@@ -30,9 +31,9 @@ ALLOWED = ["Read", "Write", "Edit", "Glob", "Grep", "Skill", "Task",
 DENIED = ["WebFetch", "WebSearch"]
 
 
-def workspace_for(case):
+def workspace_for(case, sample):
     tmp = pathlib.Path(tempfile.mkdtemp(prefix=f"pmtk-{case['id']}-"))
-    shutil.copytree(ROOT / "samples" / "kestrel", tmp, dirs_exist_ok=True)
+    shutil.copytree(sample, tmp, dirs_exist_ok=True, ignore=shutil.ignore_patterns("evals"))
     for name in ("AGENTS.md", "CLAUDE.md"):
         shutil.copy(ROOT / "plugin" / "workspace" / name, tmp / name)
     skills = tmp / ".claude" / "skills"
@@ -42,7 +43,8 @@ def workspace_for(case):
     for fx in case.get("fixtures", []):
         dest = tmp / fx["to"]
         dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy(ROOT / fx["from"], dest)
+        src = ROOT / fx["from"]
+        shutil.copy(src if src.exists() else sample / fx["from"], dest)
     return tmp
 
 
@@ -86,7 +88,7 @@ def changed_files(ws, before, out):
 
 
 def run_case(case, facts, args, outdir):
-    ws = workspace_for(case)
+    ws = workspace_for(case, args.sample)
     before = snapshot(ws)
     model = args.strong_model if case["skill"] in STRONG_SKILLS else args.model
     transcript = claude(case["prompt"], ws, model, args.timeout)
@@ -126,18 +128,23 @@ def main():
     ap.add_argument("--case", action="append", default=[])
     ap.add_argument("--model", default="sonnet")
     ap.add_argument("--strong-model", default="opus")
-    ap.add_argument("--grader-model", default="sonnet")
+    ap.add_argument("--grader-model", default="opus")
     ap.add_argument("--jobs", type=int, default=3)
     ap.add_argument("--timeout", type=int, default=1800)
+    ap.add_argument("--sample", default="samples/kestrel", help="workspace to copy for each case")
+    ap.add_argument("--cases", default="evals/cases.json")
     args = ap.parse_args()
+    args.sample = (ROOT / args.sample).resolve()
 
-    data = json.loads((ROOT / "evals" / "cases.json").read_text(encoding="utf-8"))
+    data = json.loads((ROOT / args.cases).read_text(encoding="utf-8"))
+    facts = data.get("planted_facts") or data.get("gold_facts") or []
     cases = [c for c in data["cases"]
              if (c["id"] in args.case) or (not args.case and (args.all or c.get("core")))]
-    outdir = ROOT / "evals" / "results" / datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    outdir = ROOT / pathlib.Path(args.cases).parent / "results" / stamp
     outdir.mkdir(parents=True)
     with concurrent.futures.ThreadPoolExecutor(args.jobs) as pool:
-        verdicts = list(pool.map(lambda c: run_case(c, data["planted_facts"], args, outdir), cases))
+        verdicts = list(pool.map(lambda c: run_case(c, facts, args, outdir), cases))
     (outdir / "summary.json").write_text(json.dumps(verdicts, indent=2), encoding="utf-8")
     for v in verdicts:
         print(f"{'PASS' if v.get('pass') else 'FAIL'}  {v['case_id']}  ({v['model']})  "

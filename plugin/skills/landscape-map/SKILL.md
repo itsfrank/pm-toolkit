@@ -43,6 +43,8 @@ Five lines: what exists, what's moving, the biggest unknown.
 Requests, escalations, deals, quotes (verbatim with source only).
 ## Competitors and alternatives
 Dated, sourced claims only.
+## Standards, regulation and external deadlines
+Requirements and dates from standards bodies, regulators or major customers that apply.
 ## Dependencies
 ## Overlaps and conflicts
 Places where two teams, products or sources disagree or would both claim this.
