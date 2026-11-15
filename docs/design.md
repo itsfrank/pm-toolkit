@@ -106,10 +106,12 @@ and fetches the page that probably holds the answer, so the long tail is one ste
 rather than invisible. Catalog lines are never cited; only the fetched, carded page is.
 
 Surveys stop for the PM's approval unless a budget was given up front. Budgets can be in
-dollars because Claude Code logs exact token usage per message; `tools/wiki.py spend`
-reads the session's own log (counting each message once, from the run's start time) and
-prices it from `tools/prices.json`, which the PM fills in. Prices are not written into
-skills because they change.
+dollars because `claude -p --output-format json` reports each run's `total_cost_usd` and
+per-model usage, subagents included; runs append those results to a ledger and
+`tools/wiki.py spend --ledger` sums it. Session logs are an unofficial format and
+undercount, so `spend --session-id` reads them only for mid-run estimates, priced from
+`tools/prices.json` if the PM filled it in. Prices are not written into skills because they
+change, and family-wide prices can't be exact.
 
 ## Graceful wind-down
 A run that stops at its budget mid-edit leaves half-filed pages and no trail. Long runs

@@ -84,9 +84,11 @@ line per page, so agents can find what the wiki hasn't read yet:
 ## Long runs and handoffs
 Any long or budgeted run (expanding an area, a migration, a large batch ingest or report)
 works in its folder under `work/` and follows these rules:
-- **Budget:** in dollars (via `python3 tools/wiki.py spend --since <start>` and
-  `tools/prices.json`), tokens, or pages. Record the start time (UTC) and budget in the
-  run's `LOG.md`. At about 80% of the budget, start no new batches; let running ones finish.
+- **Budget:** in dollars, tokens, or pages. Record the start time (UTC) and budget in the
+  run's `LOG.md`. Batches run as `claude -p ... --output-format json` append their result
+  to the run's `ledger.jsonl`; `python3 tools/wiki.py spend --ledger <it>` totals it exactly.
+  Within one session, `spend --session-id <id> --since <start>` gives an estimate (it
+  undercounts). At about 80% of the budget, start no new batches; let running ones finish.
 - **Wrap up gracefully** when the budget runs low, a limit is hit, or context runs short:
   leave every file consistent (no half-filed page; finish or revert a cut-off batch),
   update indexes, commit if the workspace uses git, then write the report with a

@@ -206,6 +206,38 @@ class WikiTools(unittest.TestCase):
         self.assertNotIn("8. Security and privacy", names)
         self.assertNotIn("14. Support and operations", names)  # tagged in review-log.md
 
+    # spend
+    def test_spend_sums_a_ledger(self):
+        run = {"type": "result", "subtype": "success", "session_id": "a", "total_cost_usd": 1.25,
+               "modelUsage": {"claude-sonnet-x": {"inputTokens": 1000, "outputTokens": 200, "costUSD": 1.0},
+                              "claude-haiku-x": {"inputTokens": 50, "outputTokens": 5, "costUSD": 0.25}}}
+        run2 = dict(run, session_id="b", total_cost_usd=0.75,
+                    modelUsage={"claude-sonnet-x": {"inputTokens": 500, "outputTokens": 100, "costUSD": 0.75}})
+        self.write("work/run/ledger.jsonl", json.dumps(run) + "\nnot json\n" + json.dumps(run2) + "\n")
+        (s,) = json.loads(self.run_wiki("spend", "--ledger", "work/run/ledger.jsonl", "--json"))
+        self.assertEqual((s["runs"], s["usd"]), (2, 2.0))
+        self.assertEqual(s["models"]["claude-sonnet-x"], {"inputTokens": 1500, "outputTokens": 300, "costUSD": 1.75})
+        out = self.run_wiki("spend", "--ledger", "work/run/ledger.jsonl")
+        self.assertIn("total: $2.00", out)
+        self.assertNotIn("estimate", out)
+
+    def test_spend_log_by_session_id_is_an_estimate_and_never_guesses(self):
+        out = subprocess.run([sys.executable, "tools/wiki.py", "spend"], cwd=self.ws, capture_output=True, text=True)
+        self.assertNotEqual(out.returncode, 0)
+        config = pathlib.Path(self.tmp.name) / "config"
+        msg = {"timestamp": "2026-10-06T10:00:00Z", "message": {"id": "m1", "model": "claude-sonnet-x",
+               "usage": {"input_tokens": 10, "output_tokens": 5}}}
+        log = config / "projects" / "-some-folder" / "sess-1.jsonl"
+        log.parent.mkdir(parents=True)
+        log.write_text(json.dumps(msg) + "\n" + json.dumps(msg) + "\n")
+        (log.parent / "sess-2.jsonl").write_text(json.dumps(msg) + "\n")  # another session, newer
+        env = dict(os.environ, CLAUDE_CONFIG_DIR=str(config))
+        out = subprocess.run([sys.executable, "tools/wiki.py", "spend", "--session-id", "sess-1", "--json"],
+                             cwd=self.ws, env=env, capture_output=True, text=True)
+        (s,) = json.loads(out.stdout)
+        self.assertEqual((s["source"], s["messages"], s["usd"]), ("estimate", 1, None))
+        self.assertTrue(s["file"].endswith("sess-1.jsonl"))
+
 
 if __name__ == "__main__":
     unittest.main()

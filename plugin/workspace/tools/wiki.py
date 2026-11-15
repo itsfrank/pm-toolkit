@@ -9,7 +9,7 @@ Standard library only (Python 3.8+). Run from the workspace root or pass --root.
   python3 tools/wiki.py raw-hits TERM [TERM ...] [--all] [--files N]
   python3 tools/wiki.py catalog-search TERM [TERM ...] [--all] [--limit N]
   python3 tools/wiki.py catalog-mark ID_OR_URL S-NNNN
-  python3 tools/wiki.py spend [--since ISO_TIME] [--marker TEXT] [--session FILE] [--json]
+  python3 tools/wiki.py spend [--ledger FILE] [--session-id ID [--since ISO_TIME]] [--json]
   python3 tools/wiki.py notes [--all] [--json]
   python3 tools/wiki.py note-status ID STATUS --resolution TEXT [--by NAME]
   python3 tools/wiki.py note-reply ID TEXT
@@ -21,7 +21,7 @@ Dates default to today; set PM_TODAY=YYYY-MM-DD to pin them (the sample and eval
 Read-only except: cards-from-raw writes new cards, note-status and note-reply append to notes.jsonl,
 reports-index rewrites wiki/reports/INDEX.md, catalog-mark edits one catalog line,
 lint --fix-index edits wiki/INDEX.md.
-spend reads Claude Code's own session logs under ~/.claude/projects/ (read-only).
+spend --session-id reads one Claude Code session log under ~/.claude/projects/ (read-only).
 """
 import argparse
 import datetime
@@ -302,26 +302,48 @@ def cmd_catalog_mark(wiki, args):
         print(f"{e['catalog']}:{e['line']}  {e['title']} -> {args.card}")
 
 
-def session_logs(root, session=None, marker=None):
-    """Claude Code's log for the current session in this workspace, plus its subagents' logs."""
+def ledger_spend(path):
+    """Sum a run's ledger: JSON lines, each the result of `claude -p --output-format json`
+    (total_cost_usd, and per-model modelUsage including subagents). Exact, not estimated."""
+    runs, usd, models = 0, 0.0, {}
+    for n, line in enumerate(read(pathlib.Path(path)).splitlines(), 1):
+        try:
+            r = json.loads(line) if line.strip() else None
+        except ValueError:
+            r = None
+            print(f"{path}:{n}: not a JSON result, skipped", file=sys.stderr)
+        if not isinstance(r, dict) or "total_cost_usd" not in r:
+            continue
+        runs += 1
+        usd += r.get("total_cost_usd") or 0
+        for model, u in (r.get("modelUsage") or {}).items():
+            row = models.setdefault(model, {})
+            for k, v in u.items():
+                if isinstance(v, (int, float)):
+                    row[k] = row.get(k, 0) + v
+    return {"source": "ledger", "file": str(path), "runs": runs, "usd": round(usd, 4), "models": models}
+
+
+def session_logs(session_id=None, session=None):
+    """Claude Code's log for one session, located by its id (or path), plus its subagents' logs.
+    Never guesses the newest log: several sessions can share a workspace."""
     if session:
         main = pathlib.Path(session)
     else:
         base = pathlib.Path(os.environ.get("CLAUDE_CONFIG_DIR", pathlib.Path.home() / ".claude"))
-        folder = base / "projects" / re.sub(r"[^A-Za-z0-9]", "-", str(root))
-        logs = sorted(folder.glob("*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True)
-        if marker:  # several sessions can share a workspace; pick the one that saw the marker
-            logs = [p for p in logs if marker in read(p)]
-        if not logs:
-            sys.exit(f"no Claude Code session log found in {folder}" + (" containing the marker" if marker else ""))
-        main = logs[0]
+        found = sorted((base / "projects").glob(f"*/{session_id}.jsonl"))
+        if not found:
+            sys.exit(f"no Claude Code session log {session_id}.jsonl under {base / 'projects'}")
+        main = found[0]
     return [main] + sorted((main.parent / main.stem / "subagents").glob("*.jsonl"))
 
 
-def spend(root, prices_path, since=None, session=None, marker=None):
-    """Tokens per model since a time, counting each message once, priced from prices.json."""
+def log_spend(prices_path, session_id=None, session=None, since=None):
+    """Estimate from session logs: tokens per model since a time, each message counted once.
+    The log format is unofficial and undercounts, so this is for mid-run checks only.
+    Priced from prices.json if it is filled in; otherwise budget in tokens."""
     usage = {}  # message id -> (model, usage); log lines repeat per content block
-    files = session_logs(root, session, marker)
+    files = session_logs(session_id, session)
     for path in files:
         for line in read(path).splitlines():
             try:
@@ -334,9 +356,7 @@ def spend(root, prices_path, since=None, session=None, marker=None):
             usage[m.get("id") or e.get("uuid")] = (m.get("model", "unknown"), m["usage"])
     keys = ("input_tokens", "output_tokens", "cache_creation_input_tokens", "cache_read_input_tokens")
     price_keys = dict(zip(keys, ("input", "output", "cache_write", "cache_read")))
-    prices = {}
-    if prices_path.exists():
-        prices = json.loads(read(prices_path)).get("models", {})
+    prices = json.loads(read(prices_path)).get("models", {}) if prices_path.exists() else {}
     models = {}
     for model, u in usage.values():
         row = models.setdefault(model, dict.fromkeys(keys, 0))
@@ -350,24 +370,37 @@ def spend(root, prices_path, since=None, session=None, marker=None):
             total += row["usd"]
         else:
             priced = False
-    return {"session": str(files[0]), "subagent_logs": len(files) - 1, "since": since,
-            "messages": len(usage), "models": models,
-            "usd": round(total, 2) if priced and models else None,
-            "note": None if priced else "no complete price for some models in tools/prices.json; budget in tokens"}
+    return {"source": "estimate", "file": str(files[0]), "subagent_logs": len(files) - 1, "since": since,
+            "messages": len(usage), "models": models, "usd": round(total, 2) if priced and models else None}
 
 
 def cmd_spend(wiki, args):
-    s = spend(wiki.root, wiki.root / "tools" / "prices.json", args.since, args.session, args.marker)
+    if not (args.ledger or args.session_id or args.session):
+        sys.exit("spend needs --ledger FILE (exact) or --session-id ID (estimate); it never guesses a session")
+    parts = []
+    if args.ledger:
+        parts.append(ledger_spend(args.ledger))
+    if args.session_id or args.session:
+        parts.append(log_spend(wiki.root / "tools" / "prices.json", args.session_id, args.session, args.since))
     if args.json:
-        print(json.dumps(s, indent=2))
+        print(json.dumps(parts, indent=2))
         return
-    print(f"session log: {s['session']} (+{s['subagent_logs']} subagent logs), {s['messages']} messages"
-          + (f" since {s['since']}" if s["since"] else ""))
-    for model, row in s["models"].items():
-        tokens = ", ".join(f"{k.replace('_input_tokens', '').replace('_tokens', '')} {v:,}"
-                           for k, v in row.items() if k != "usd")
-        print(f"  {model}: {tokens}" + (f"  = ${row['usd']:.2f}" if "usd" in row else ""))
-    print(f"total: ${s['usd']:.2f}" if s["usd"] is not None else f"total: unpriced ({s['note']})")
+    for s in parts:
+        if s["source"] == "ledger":
+            print(f"ledger {s['file']}: {s['runs']} run(s), ${s['usd']:.2f}")
+        else:
+            print(f"estimate from session log {s['file']} (+{s['subagent_logs']} subagent logs), "
+                  f"{s['messages']} messages" + (f" since {s['since']}" if s["since"] else ""))
+        for model, row in s["models"].items():
+            cost = row.get("costUSD", row.get("usd"))
+            tokens = ", ".join(f"{k} {v:,}" for k, v in row.items() if k.lower().endswith("tokens"))
+            print(f"  {model}: {tokens}" + (f"  = ${cost:.2f}" if cost is not None else ""))
+    usd = [s["usd"] for s in parts]
+    estimate = any(s["source"] == "estimate" for s in parts)
+    if None in usd:
+        print("total: unpriced estimate; budget in tokens (or fill in tools/prices.json)")
+    else:
+        print(f"total: ${sum(usd):.2f}" + (" (estimate: session logs undercount)" if estimate else ""))
 
 
 TOKEN = re.compile(r"[a-z0-9][a-z0-9.\-]*[a-z0-9]")
@@ -844,10 +877,11 @@ def main():
     p.add_argument("page", help="page id, url or export file from the catalog line")
     p.add_argument("card", help="the new source card, S-NNNN")
     p.set_defaults(fn=cmd_catalog_mark)
-    p = sub.add_parser("spend", help="tokens and cost of this Claude Code session (reads its own logs)")
-    p.add_argument("--since", help="ISO time; count only messages after it (the run's start)")
-    p.add_argument("--marker", help="pick the session whose log contains this text")
-    p.add_argument("--session", help="path to a session .jsonl log")
+    p = sub.add_parser("spend", help="cost of a run: exact from a ledger, or estimated from a session log")
+    p.add_argument("--ledger", help="JSON lines of `claude -p --output-format json` results")
+    p.add_argument("--session-id", help="estimate from this Claude Code session's log")
+    p.add_argument("--session", help="estimate from this session .jsonl log (path)")
+    p.add_argument("--since", help="ISO time; for log estimates, count only messages after it")
     p.add_argument("--json", action="store_true")
     p.set_defaults(fn=cmd_spend)
     p = sub.add_parser("notes", help="list notes and where their quotes are now")

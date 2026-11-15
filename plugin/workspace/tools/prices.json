@@ -1,5 +1,5 @@
 {
-  "_note": "USD per million tokens, by model-name prefix. Fill in from your provider's current price list; tools/wiki.py spend leaves any model with a missing price unpriced and budgets in tokens instead.",
+  "_note": "Optional. USD per million tokens, by model-name prefix, used only to price spend --session-id estimates. Budgets use spend --ledger, which needs no prices; with a missing price the estimate stays in tokens.",
   "models": {
     "claude-opus": {"input": null, "output": null, "cache_write": null, "cache_read": null},
     "claude-sonnet": {"input": null, "output": null, "cache_write": null, "cache_read": null},

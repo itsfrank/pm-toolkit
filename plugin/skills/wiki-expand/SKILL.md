@@ -47,9 +47,9 @@ time from `date -u +%Y-%m-%dT%H:%M:%SZ`. Budget may be dollars, tokens or pages.
 Ingest in rank order with `wiki-ingest` rules: raw copy with the origin URL on top, a card
 with `origin_url`, `origin_id`, `origin_version`, `last_checked`, `recheck_days`, and
 `## Contents` for long pages. On cards of pages that predate the acquisition or reorg, add a
-caveat with the date. After each batch: `python3 tools/wiki.py spend --since <start>` (or
-count tokens or pages), append the running total to `LOG.md`, and re-plan the remaining
-batches. At about 80% of the budget, stop starting batches.
+caveat with the date. After each batch: `python3 tools/wiki.py spend` (`--ledger
+<folder>/ledger.jsonl`, else `--session-id ${CLAUDE_SESSION_ID} --since <start>`; or count
+tokens or pages), append the running total to `LOG.md`, and re-plan the remaining batches. At about 80% of the budget, stop starting batches.
 
 ## 5. Build
 - Pages for the area's products, teams, people (work facts only) and initiatives, cited.
