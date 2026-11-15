@@ -1,0 +1,16 @@
+{
+  "_comment": "Search properties the Failure 5 cases rely on, under a plain all-words search of title + body. Checked by scripts/datasets/check_connector.py.",
+  "found_by": {
+    "42201": ["event inspector", "inspector samples"],
+    "42011": ["backup", "disaster recovery", "decision log"],
+    "42015": ["backups"],
+    "42101": ["Collect EU", "ingestion EU"],
+    "42401": ["residency", "EU residency"],
+    "42501": ["encryption", "TLS"],
+    "44211": ["EU residency"]
+  },
+  "not_found_by": {
+    "42201": ["Lookout", "support console", "lookout-debug"],
+    "42014": ["backup", "backups", "disaster recovery", "DR", "Fjord", "EU", "residency", "eu-central-1", "us-east-1"]
+  }
+}
