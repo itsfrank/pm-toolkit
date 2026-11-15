@@ -13,13 +13,14 @@ Standard library only (Python 3.8+). Run from the workspace root or pass --root.
   python3 tools/wiki.py notes [--all] [--json]
   python3 tools/wiki.py note-status ID STATUS --resolution TEXT [--by NAME]
   python3 tools/wiki.py note-reply ID TEXT
-  python3 tools/wiki.py lint [--json] [--today YYYY-MM-DD]
+  python3 tools/wiki.py lint [--json] [--today YYYY-MM-DD] [--fix-index]
   python3 tools/wiki.py reports-index
 
 Dates default to today; set PM_TODAY=YYYY-MM-DD to pin them (the sample and evals do).
 
 Read-only except: cards-from-raw writes new cards, note-status and note-reply append to notes.jsonl,
-reports-index rewrites wiki/reports/INDEX.md, catalog-mark edits one catalog line.
+reports-index rewrites wiki/reports/INDEX.md, catalog-mark edits one catalog line,
+lint --fix-index edits wiki/INDEX.md.
 spend reads Claude Code's own session logs under ~/.claude/projects/ (read-only).
 """
 import argparse
@@ -587,7 +588,10 @@ def lint(wiki, today):
     index = read(wiki.wiki / "INDEX.md") if (wiki.wiki / "INDEX.md").exists() else ""
     for path in pages:
         if wiki.rel(path).replace("wiki/", "", 1) not in index:
-            add("not in INDEX.md", wiki.rel(path))
+            add("not in INDEX.md (lint --fix-index adds them)", wiki.rel(path))
+    for target in re.findall(r"\]\((pages/[^)\s]+)\)", index):
+        if not (wiki.wiki / target).exists():
+            add("INDEX.md lines pointing nowhere (lint --fix-index drops them)", target)
         if inbound[path] == 0:
             add("orphan pages (no links from other pages)", wiki.rel(path))
 
@@ -616,6 +620,22 @@ def lint(wiki, today):
         when = parse_date(fields.get("as_of") or fields.get("date") or path.name[:10])
         if when and (today - when).days > 60:
             add("old reports (snapshots; re-run if still used)", f"{wiki.rel(path)}: {when}")
+        if str(fields.get("promoted", "")).lower() == "no" and when and (today - when).days > 30:
+            add("reports not promoted after 30 days (file durable facts with wiki-ingest)",
+                f"{wiki.rel(path)}: {when}")
+
+    work = [p for p in (wiki.root / "work").rglob("*.md")] if (wiki.root / "work").is_dir() else []
+    work_text = [read(p) for p in work]
+    drafts = []
+    for path in pages:
+        if frontmatter(read(path))[0].get("status") == "draft":
+            key = wiki.rel(path).replace("wiki/", "", 1)
+            drafts.append((sum(key in t for t in work_text), key))
+    for n, key in sorted(drafts, key=lambda d: (-d[0], d[1])):
+        add("draft pages to review (most used in work/ first)", f"{key}: {n} work file(s)")
+
+    for lens in unfired_lenses(wiki, work_text):
+        add("lenses that never fired (retirement candidates; keep if still relevant)", lens)
 
     origins = {str(f.get("origin_id", "")) for _, f, _ in cards.values() if f.get("origin_id")}
     for e in catalog_entries(wiki) if (wiki.wiki / "catalog").is_dir() else []:
@@ -631,7 +651,64 @@ def lint(wiki, today):
     return report
 
 
+LENS_TAG = re.compile(r"(?:\*\*lens:\*\*|\blens:)\s*`?(\d+)", re.I)
+
+
+def unfired_lenses(wiki, work_text, min_reviews=5):
+    """Lenses no review-log entry tags and no coverage table marks missing, partial or
+    unverified. Empty until there are min_reviews log entries and coverage tables."""
+    path = wiki.wiki / "lenses.md"
+    lenses = re.findall(r"^## (\d+)\.\s*(.+)$", read(path), re.M) if path.exists() else []
+    log = read(wiki.wiki / "review-log.md") if (wiki.wiki / "review-log.md").exists() else ""
+    fired = set(LENS_TAG.findall(log))
+    reviews = len(re.findall(r"^## \d{4}-\d{2}-\d{2}", log, re.M))
+    for text in work_text:
+        fired |= set(LENS_TAG.findall(text))
+        rows = re.findall(r"^\|\s*(\d+)\s*\|[^|\n]*\|\s*([^|\n]*?)\s*\|", text, re.M)
+        reviews += bool(rows)
+        fired |= {n for n, state in rows if state.lower().strip("*") in ("missing", "partial", "unverified")}
+    return [f"{n}. {name}" for n, name in lenses if n not in fired] if reviews >= min_reviews else []
+
+
+def fix_index(wiki):
+    """Drop INDEX.md lines whose page is gone and add a line for each unlisted page under
+    its section. Curated lines and text are kept as they are."""
+    path = wiki.wiki / "INDEX.md"
+    lines = read(path).splitlines() if path.exists() else ["# Wiki index"]
+    dead = [l for l in lines if re.match(r"^- \[.*\]\((pages/[^)\s]+)\)", l)
+            and not (wiki.wiki / re.match(r"^- \[.*\]\((pages/[^)\s]+)\)", l).group(1)).exists()]
+    lines = [l for l in lines if l not in dead]
+    added = []
+    for page in wiki.pages():
+        key = wiki.rel(page).replace("wiki/", "", 1)
+        if any(f"]({key})" in l for l in lines):
+            continue
+        fields, body = frontmatter(read(page))
+        title = next((l[2:].strip() for l in body.splitlines() if l.startswith("# ")), page.stem)
+        summary = next((l.strip() for l in body.splitlines() if l.strip() and l[0] not in "#-|<"), "")
+        line = (f"- [{title}]({key}) ({fields.get('status', 'draft')}, {fields.get('updated', '?')}): "
+                f"{summary[:100] or '(describe)'}")
+        section = "## " + page.parent.name.capitalize()
+        if section not in lines:
+            lines += ["", section]
+        at = lines.index(section) + 1
+        while at < len(lines) and lines[at].startswith("- "):
+            at += 1
+        lines.insert(at, line)
+        added.append(key)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return added, dead
+
+
 def cmd_lint(wiki, args):
+    if args.fix_index:
+        added, dead = fix_index(wiki)
+        print(f"INDEX.md: added {len(added)} line(s), dropped {len(dead)} dead line(s)")
+        for key in added:
+            print(f"+ {key}")
+        for line in dead:
+            print(f"- {line}")
+        return
     report = lint(wiki, today_arg(args.today))
     if args.json:
         print(json.dumps(report, indent=2))
@@ -791,6 +868,7 @@ def main():
     p.add_argument("--json", action="store_true")
     p.add_argument("--today")
     p.add_argument("--limit", type=int, default=15)
+    p.add_argument("--fix-index", action="store_true", help="add missing INDEX.md lines, drop dead ones")
     p.set_defaults(fn=cmd_lint)
     sub.add_parser("reports-index", help="rebuild wiki/reports/INDEX.md").set_defaults(fn=cmd_reports_index)
     args = ap.parse_args()

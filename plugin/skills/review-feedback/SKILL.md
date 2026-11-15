@@ -71,7 +71,7 @@ to the relevant page's `## Open questions` and suggest who might know.
 - **Artifact:** work/... or the source document
 - **Reviewer role:** role, not name, unless the user prefers names
 - **What was missed or wrong:**
-- **Lens:** number and name
+- **Lens:** `lens: N` and the lens name (wiki-lint counts these tags)
 - **Why it was missed:** not in wiki / not surfaced / wrong source / no lens / lens skipped
 - **The fact, with source:** [S-NNNN] or "from reviewer, to confirm"
 - **Fix applied:** wiki page updated / lens probe added / preference recorded / pending

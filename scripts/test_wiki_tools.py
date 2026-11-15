@@ -153,6 +153,59 @@ class WikiTools(unittest.TestCase):
         self.assertIn("1 note(s)", out)
         self.assertEqual(self.status()["needs_info_notes"], 0)
 
+    # lint
+    def lint(self):
+        return json.loads(self.run_wiki("lint", "--json"))
+
+    def test_lint_fix_index_adds_and_drops_keeping_curated_text(self):
+        index = self.ws / "wiki/INDEX.md"
+        curated = index.read_text()
+        self.write("wiki/pages/products/kestrel-pulse.md",
+                   "---\ntype: product\nstatus: draft\nupdated: 2026-10-01\n---\n\n# Kestrel Pulse\n\n"
+                   "Real-time alerting add-on. [S-0001]\n")
+        index.write_text(curated + "- [Gone](pages/topics/gone.md) (draft, 2026-01-01): removed page.\n")
+        report = self.lint()
+        self.assertIn("pages/topics/gone.md", sum(report.values(), []))
+        out = self.run_wiki("lint", "--fix-index")
+        self.assertIn("added 1 line(s), dropped 1 dead line(s)", out)
+        text = index.read_text()
+        self.assertNotIn("pages/topics/gone.md", text)
+        products = text.split("## Products")[1].split("## ")[0]
+        self.assertIn("- [Kestrel Pulse](pages/products/kestrel-pulse.md) (draft, 2026-10-01): "
+                      "Real-time alerting add-on. [S-0001]", products)
+        for line in curated.splitlines():
+            self.assertIn(line, text)
+        self.assertIn("added 0 line(s), dropped 0", self.run_wiki("lint", "--fix-index"))
+
+    def test_lint_lists_unpromoted_reports_and_drafts_by_use(self):
+        self.write("wiki/reports/2026-08-01-overlaps.md", "---\ntitle: Overlaps\nquestion: Where do plans clash?\n"
+                   "as_of: 2026-08-01\nsources: [S-0004]\npromoted: no\n---\n# Overlaps\n")
+        self.write("wiki/reports/2026-09-30-recent.md", "---\ntitle: Recent\nquestion: q\n"
+                   "as_of: 2026-09-30\nsources: [S-0004]\npromoted: no\n---\n# Recent\n")
+        self.write("work/2026-10-05-eu-data-residency/landscape.md",
+                   "See [Govern](../../wiki/pages/products/kestrel-govern.md) and pages/teams/govern-team.md.\n")
+        self.write("work/2026-10-05-eu-data-residency/coverage.md", "Govern: pages/products/kestrel-govern.md\n")
+        report = self.lint()
+        unpromoted = next(v for k, v in report.items() if k.startswith("reports not promoted"))
+        self.assertEqual(unpromoted, ["wiki/reports/2026-08-01-overlaps.md: 2026-08-01"])
+        drafts = next(v for k, v in report.items() if k.startswith("draft pages"))
+        self.assertEqual(drafts[:2], ["pages/products/kestrel-govern.md: 2 work file(s)",
+                                      "pages/teams/govern-team.md: 1 work file(s)"])
+
+    def test_lint_lists_lenses_that_never_fired_once_there_is_history(self):
+        def unfired():
+            return next((v for k, v in self.lint().items() if k.startswith("lenses that never fired")), [])
+        self.assertEqual(unfired(), [])  # one review-log entry is too little history
+        for n in range(4):
+            self.write(f"work/2026-0{n + 1}-01-ask-{n}/coverage.md",
+                       "| # | Lens | Status | Finding |\n|---|---|---|---|\n"
+                       "| 8 | Security and privacy | missing | no audit story |\n"
+                       "| 9 | Compliance | covered | fine |\n")
+        names = unfired()
+        self.assertIn("9. Compliance, regulation, certification", names)
+        self.assertNotIn("8. Security and privacy", names)
+        self.assertNotIn("14. Support and operations", names)  # tagged in review-log.md
+
 
 if __name__ == "__main__":
     unittest.main()

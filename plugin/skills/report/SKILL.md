@@ -37,6 +37,7 @@ question: <the question, as asked>
 as_of: YYYY-MM-DD
 sources: [S-NNNN, ...]
 refreshes:          # earlier report this replaces, if any
+promoted: no        # yes once its durable facts are filed into pages
 ---
 # <Title>
 **Question:** <as asked>. **As of:** <date>. **Sources read:** <count, and connectors searched>.

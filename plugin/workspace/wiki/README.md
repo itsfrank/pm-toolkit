@@ -43,7 +43,7 @@ conflict scans, summaries of an area. Reports are lighter than pages:
 - Required header: the question asked, date, sources read, and "as of" date.
 - Cite facts as usual so the reader can click through. No template or status needed.
 - A report is a snapshot. Never cite a report from a page; file durable facts into pages
-  with `wiki-ingest`, keeping the original citations.
+  with `wiki-ingest`, keeping the original citations, then set `promoted: yes`.
 - Refreshing a report means a new dated file, or an update with a `Refreshed:` line.
 - `reports/INDEX.md` is generated: `python3 tools/wiki.py reports-index`.
 
