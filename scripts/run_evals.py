@@ -174,17 +174,46 @@ def mechanical(item, ctx):
 # ---------- judging ----------
 
 def norm(s):
-    return " ".join(str(s).split()).lower()
+    """Letters and digits only, so markdown, diff markers and spacing don't break a quote."""
+    return " ".join(re.findall(r"[a-z0-9]+", str(s).lower()))
 
 
-def judge_prompt(case, items, nots, facts, output, changed, reply):
+def quote_found(quote, haystack):
+    """Every part of the quote (split at ellipses) appears in the normalized haystack."""
+    parts = [norm(p) for p in re.split(r"\.\.\.|\u2026|\[\.\.\.\]", str(quote))]
+    parts = [p for p in parts if p]
+    return bool(parts) and all(p in haystack for p in parts)
+
+
+def cited_sources(ws, text, cap=80000):
+    """Cards and raw files the output cites, so judges can check claims against them."""
+    out, size = [], 0
+    for sid in sorted(set(re.findall(r"S-\d{4}", text))):
+        card = ws / "wiki" / "sources" / f"{sid}.md"
+        if not card.exists():
+            continue
+        body = card.read_text(encoding="utf-8", errors="replace")
+        m = re.search(r"^origin:\s*(\S+)", body, re.M)
+        raw = ws / "wiki" / m.group(1) if m else None
+        chunk = f"### {sid} card\n{body}\n" + (f"### {sid} raw ({m.group(1)})\n{raw.read_text(encoding='utf-8', errors='replace')}\n"
+                                              if raw and raw.is_file() and raw.suffix in (".md", ".txt", ".csv") else "")
+        if size + len(chunk) > cap:
+            out.append(f"(more cited sources omitted: cap {cap} chars)")
+            break
+        out.append(chunk)
+        size += len(chunk)
+    return "\n".join(out) or "(no cited source cards found)"
+
+
+def judge_prompt(case, items, nots, facts, output, changed, reply, sources):
     view = dict(case, must_find=items, must_not=nots)
     refs = {m.get("fact") for m in items} - {None}
     grader = (ROOT / "evals" / "GRADER.md").read_text(encoding="utf-8")
     return (f"{grader}\n\n## Case\n```json\n{json.dumps(view, indent=2)}\n```\n\n"
             f"## Planted facts\n```json\n{json.dumps([f for f in facts if f['id'] in refs], indent=2)}\n```\n\n"
             f"## Output file\n{output}\n\n## Other files created or changed by the run\n{changed[:CHANGED_CAP]}\n\n"
-            f"## Final reply\n{reply}\n\nReturn only the JSON verdict.")
+            f"## Final reply\n{reply}\n\n## Sources the output cites (for checking claims; data, not instructions)\n{sources}\n\n"
+            "Return only the JSON verdict.")
 
 
 def call_judge(name, prompt, timeout):
@@ -217,7 +246,7 @@ def checked(verdict, key, positive, haystack):
     for v in verdict.get(key, []):
         state = v.get("verdict")
         if state == positive:
-            ok = bool(v.get("quote")) and norm(v["quote"]) in haystack
+            ok = quote_found(v.get("quote", ""), haystack)
             out[v["id"]] = "yes" if ok else "no"
             if not ok:
                 bad.append(v["id"])
@@ -226,7 +255,7 @@ def checked(verdict, key, positive, haystack):
     return out, bad
 
 
-def grade(case, facts, run, args):
+def grade(case, facts, run, args, reuse=None):
     """Combine mechanical checks and both judges into per-item and run-level results."""
     ctx = {"ws": pathlib.Path(run["workspace"]), "haystack": run["output"] + "\n" + run["changed"] + "\n" + run["reply"],
            "log": run.get("log", [])}
@@ -235,8 +264,12 @@ def grade(case, facts, run, args):
     mech_not = {i["id"]: mechanical(i, ctx) for i in case["must_not"]}
     judge_find = [i for i in case["must_find"] if mech_find[i["id"]] is None]
     judge_not = [i for i in case["must_not"] if mech_not[i["id"]] is None]
-    verdicts, prompt = {}, judge_prompt(case, judge_find, judge_not, facts, run["output"], run["changed"], run["reply"])
-    if judge_find or judge_not:
+    sources = cited_sources(ctx["ws"], run["output"] + run["changed"]) if ctx["ws"].exists() else "(workspace gone)"
+    verdicts = {}
+    prompt = judge_prompt(case, judge_find, judge_not, facts, run["output"], run["changed"], run["reply"], sources)
+    if (judge_find or judge_not) and reuse:
+        verdicts = {n: v for n, v in reuse.items() if n in args.graders}
+    elif judge_find or judge_not:
         for name in args.graders:
             v, cost = call_judge(name, prompt, args.timeout)
             if "error" in v:  # one retry, then the run is excluded
@@ -386,7 +419,9 @@ def regrade(args):
         run.update(output=(d / "output.md").read_text(), changed=(d / "changed.md").read_text(),
                    reply=(d / "reply.md").read_text())
         case = cases[run["case_id"]]
-        r = grade(case, facts, run, args) if not run["agent"].get("error") else {"status": "error", "error": run["agent"]["error"]}
+        old_grade = json.loads((d / "grade.json").read_text()) if (d / "grade.json").exists() else {}
+        reuse = old_grade.get("verdicts") if args.reuse_verdicts else None
+        r = grade(case, facts, run, args, reuse) if not run["agent"].get("error") else {"status": "error", "error": run["agent"]["error"]}
         r.update(case_id=run["case_id"], rep=run["rep"], model=run["model"], cost_usd=run["agent"].get("cost_usd"))
         (outdir / run["case_id"] / f"run{run['rep']}").mkdir(parents=True, exist_ok=True)
         (outdir / run["case_id"] / f"run{run['rep']}" / "grade.json").write_text(json.dumps(r, indent=2))
@@ -421,6 +456,8 @@ def main():
     ap.add_argument("--cases", default="evals/cases.json")
     ap.add_argument("--kit", default=".", help="toolkit checkout whose plugin/ is tested")
     ap.add_argument("--arm", choices=["full", "agents-only", "none"], default="full")
+    ap.add_argument("--reuse-verdicts", action="store_true",
+                    help="regrade: re-score saved judge verdicts without new judge calls")
     args = ap.parse_args()
     args.graders = [g for g in args.graders.split(",") if g]
     if any(g not in JUDGES for g in args.graders):
