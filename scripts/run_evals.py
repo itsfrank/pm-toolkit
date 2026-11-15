@@ -187,18 +187,26 @@ def quote_found(quote, haystack):
     return bool(parts) and all(p in haystack for p in parts)
 
 
-def cited_sources(ws, text, cap=80000):
+def cited_sources(ws, text, cap=80000, cards=True):
     """Cards and raw files the output cites, so judges can check claims against them."""
-    out, size = [], 0
-    for sid in sorted(set(re.findall(r"S-\d{4}", text))):
+    out, size, chunks = [], 0, []
+    ids = set(re.findall(r"S-\d{4}", text))
+    for sid in sorted(ids) if cards else []:
         card = ws / "wiki" / "sources" / f"{sid}.md"
         if not card.exists():
             continue
         body = card.read_text(encoding="utf-8", errors="replace")
         m = re.search(r"^origin:\s*(\S+)", body, re.M)
         raw = ws / "wiki" / m.group(1) if m else None
-        chunk = f"### {sid} card\n{body}\n" + (f"### {sid} raw ({m.group(1)})\n{raw.read_text(encoding='utf-8', errors='replace')}\n"
-                                              if raw and raw.is_file() and raw.suffix in (".md", ".txt", ".csv") else "")
+        chunks.append(f"### {sid} card\n{body}\n" + (f"### {sid} raw ({m.group(1)})\n{raw.read_text(encoding='utf-8', errors='replace')}\n"
+                                                    if raw and raw.is_file() and raw.suffix in (".md", ".txt", ".csv") else ""))
+    # wiki pages built on the cited cards: outputs often carry their facts with the cards' ids
+    for page in sorted((ws / "wiki" / "pages").rglob("*.md")) if (ws / "wiki" / "pages").is_dir() else []:
+        body = page.read_text(encoding="utf-8", errors="replace")
+        m = re.search(r"^sources:\s*\[([^\]]*)\]", body, re.M)
+        if m and ids & set(re.findall(r"S-\d{4}", m.group(1))):
+            chunks.append(f"### wiki page {page.relative_to(ws / 'wiki')}\n{body}\n")
+    for chunk in chunks:
         if size + len(chunk) > cap:
             out.append(f"(more cited sources omitted: cap {cap} chars)")
             break
@@ -480,6 +488,9 @@ def regrade(args):
         d = run_json.parent
         run = load_bundle(d)
         case = cases[run["case_id"]]
+        ws = next((w for w in (pathlib.Path(run["workspace"]), pathlib.Path(old["sample"])) if w.is_dir()), None)
+        if run.get("sources") and ws and "### wiki page" not in run["sources"]:  # saved before pages were sent
+            run["sources"] += "\n" + cited_sources(ws, run["output"] + run["changed"], cards=False)
         old_grade = json.loads((d / "grade.json").read_text()) if (d / "grade.json").exists() else {}
         reuse = (old_grade.get("verdicts") or {}) if args.reuse_verdicts else None
         r = grade(case, facts, run, args, reuse) if not run["agent"].get("error") else {"status": "error", "error": run["agent"]["error"]}
@@ -488,7 +499,8 @@ def regrade(args):
         save_bundle(run, dest)
         (dest / "grade.json").write_text(json.dumps(r, indent=2))
         results.append(r)
-    meta = dict(old, regraded_from=src.name, grader_sha=sha(ROOT / "evals" / "GRADER.md"),
+    meta = dict(old, regraded_from=src.name, cases_sha=sha(ROOT / args.cases),
+                grader_sha=sha(ROOT / "evals" / "GRADER.md"),
                 judges=[f"{g}={JUDGES[g]}" for g in args.graders])
     rows = summarize(results, [c for c in data["cases"] if any(r["case_id"] == c["id"] for r in results)], outdir, meta)
     print_rows(rows, outdir)

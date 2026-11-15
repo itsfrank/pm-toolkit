@@ -2316,7 +2316,7 @@
           "critical": true,
           "fact": "CF5",
           "log_check": {
-            "searched_alias": "event inspector"
+            "fetched": "42201"
           }
         },
         {
