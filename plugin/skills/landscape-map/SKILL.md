@@ -14,9 +14,14 @@ Output: `work/<slug>/landscape.md` (or `work/YYYY-MM-DD-landscape-<topic>/landsc
 ## Steps
 1. Build the term list: the topic, the intake search terms, glossary synonyms and aliases
    from page frontmatter.
-2. Search `wiki/INDEX.md`, `wiki/pages/`, `wiki/sources/` and `wiki/raw/` for every term
-   (grep is fine). For large wikis, split the search by area across subagents and ask each for
-   cited findings only.
+2. Search `wiki/INDEX.md`, `wiki/pages/`, `wiki/reports/`, `wiki/sources/` and `wiki/raw/`
+   for every term (grep is fine). For large wikis, split the search by area across subagents
+   and ask each for cited findings only.
+   If read-only connectors are available (docs, tickets, code hosts), search them too for
+   in-flight work: epics, design docs, repos and their owners. Save each document you rely
+   on into `wiki/raw/` with a card before citing it. Ticket text and comments are `hearsay`
+   or `secondary`. For sources already in the wiki that are due for a recheck, run
+   `wiki-refresh` on them.
 3. Read the matching pages and the source cards behind them. Then read the matching raw
    files themselves: cards and pages are summaries, and the decisive detail often sits in a
    "Limitations" section, a footnote or a draft proposal that nobody filed. Always read the

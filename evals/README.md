@@ -22,6 +22,7 @@ surfacing conflicts, not overclaiming, and ignoring instructions inside document
 1. Copy the sample to a fresh temp directory (every case starts from a clean copy):
    ```
    T=$(mktemp -d) && cp -R samples/kestrel/. "$T" && cp plugin/workspace/AGENTS.md plugin/workspace/CLAUDE.md "$T"
+   cp -R plugin/workspace/tools "$T/tools"
    ```
    If the case has `fixtures`, copy each `from` (relative to this repo) to its `to`
    (relative to `$T`). Fixtures live in `evals/fixtures/` so the sample stays clean for demos.
@@ -46,6 +47,12 @@ file edits for the temp directory only (e.g. `--permission-mode acceptEdits`), a
 give eval runs network tools or connectors. Some cases chain skills (landscape-map runs
 intake first, prd runs the whole discovery), so their outputs and dates can vary; output
 folder dates in `output_file` are a guide, grade the file the run produced.
+
+The runner also copies `plugin/workspace/tools/` into each workspace and allows
+`python3 tools/wiki.py` and `git` (the migration case works on a branch); `.git/` is left
+out of the graded diff. `migrate-legacy-kb` copies a messy pre-toolkit knowledge base from
+`fixtures/legacy-kb/` into `old-kb/` and runs `MIGRATION.md` unattended on the strong
+model; it is the most expensive case.
 
 ## Cost and when to run
 Each case is a full agent run over about 60 files, and coverage, critical-review and prd

@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Structural checks for pm-toolkit: skill frontmatter, JSON files, workspace template
-completeness and relative markdown links. Standard library only.
+completeness, relative markdown links, and the code rules (Python standard library only,
+no external loads in browser code). Standard library only.
 
 Usage: python3 scripts/validate.py
 """
+import ast
 import json
 import pathlib
 import re
@@ -17,7 +19,11 @@ REQUIRED_WORKSPACE = [
     "AGENTS.md", "CLAUDE.md", "work/README.md",
     "wiki/README.md", "wiki/INDEX.md", "wiki/glossary.md", "wiki/lenses.md",
     "wiki/review-log.md", "wiki/sources/_TEMPLATE.md", "wiki/pages/_TEMPLATE.md",
+    "wiki/reports/INDEX.md", "wiki/pages/people", "wiki/CHEATSHEET.md", "tools/wiki.py", "tools/viewer/serve.py",
+    "tools/viewer/README.md",
 ]
+EXTERNAL = re.compile(r"""(?:src|href)\s*=\s*["']\s*(?:https?:)?//|@import\s+url\(\s*["']?(?:https?:)?//"""
+                      r"""|\bimport\b[^;\n]*["'](?:https?:)?//|fetch\(\s*["'](?:https?:)?//""", re.I)
 LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
 errors = []
 
@@ -64,6 +70,32 @@ def check_workspace():
             errors.append(f"plugin/workspace/{rel}: missing")
 
 
+def check_code():
+    if not (ROOT / "plugin" / "MIGRATION.md").exists():
+        errors.append("plugin/MIGRATION.md: missing")
+    stdlib = getattr(sys, "stdlib_module_names", None)
+    for path in sorted((ROOT / "plugin").rglob("*.py")):
+        rel = path.relative_to(ROOT)
+        source = path.read_text(encoding="utf-8")
+        try:
+            tree = ast.parse(source, str(rel))
+        except SyntaxError as e:
+            errors.append(f"{rel}: syntax error ({e})")
+            continue
+        if stdlib is None:
+            continue
+        local = {p.stem for p in path.parent.parent.glob("*.py")} | {p.stem for p in path.parent.glob("*.py")}
+        for node in ast.walk(tree):
+            names = [a.name for a in node.names] if isinstance(node, ast.Import) else \
+                [node.module] if isinstance(node, ast.ImportFrom) and node.module and not node.level else []
+            for name in names:
+                if name.split(".")[0] not in stdlib | local:
+                    errors.append(f"{rel}: imports non-standard-library module '{name}'")
+    for path in sorted((ROOT / "plugin").rglob("*")):
+        if path.suffix in (".js", ".html", ".css") and EXTERNAL.search(path.read_text(encoding="utf-8")):
+            errors.append(f"{path.relative_to(ROOT)}: loads an external URL")
+
+
 def check_links(files):
     for path in files:
         if path.suffix != ".md" or not path.is_file() or path.name == "_TEMPLATE.md":
@@ -83,6 +115,7 @@ def main():
     check_skills()
     check_json(files)
     check_workspace()
+    check_code()
     check_links(files)
     for e in errors:
         print(e)

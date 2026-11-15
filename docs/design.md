@@ -39,10 +39,14 @@ design doc. Conflicts are shown side by side rather than resolved silently. "Not
 `unknown`, never "doesn't exist". These rules matter most for external outputs (RFPs,
 marketing, gap analyses), where overclaiming is costly.
 
-**6. Markdown only, local only.** No scripts, hooks, MCP servers or connectors. The whole
-toolkit can be reviewed in under an hour, which matters at companies where installing
-outside tools needs approval. Documents stay on the PM's machine, and the agent never sends
-anything. Connectors can be added later, deliberately; see [security](security.md).
+**6. Reviewable, local only.** Skills are markdown. Where code makes work deterministic or
+cheaper (next IDs, card drafts, index rebuilds, mechanical lint checks, note anchoring) it
+lives in `tools/` and uses only the Python standard library, so it runs on locked-down
+laptops where package installs are blocked. The viewer is plain browser JavaScript served
+from localhost. No hooks or MCP servers are required, and the whole toolkit can be reviewed
+in about an hour, which matters at companies where installing outside tools needs
+approval. Documents stay on the PM's machine, and the agent never sends anything.
+Connectors are optional and used read-only; see [security](security.md).
 
 **7. Budget-aware.** Reading, filing and mapping run fine on a mid-tier model. Coverage,
 critical review and final PRD passes benefit from the strongest model, and the skills say so.
@@ -56,3 +60,45 @@ can read the index, open a handful of pages and follow citations to source cards
 ## What stays human
 Deciding what to build, approving external answers, making roadmap commitments, judging
 trade-offs, and talking to people. The toolkit prepares and checks; it doesn't decide.
+
+## Reading, notes and reports
+PMs read the wiki more than they edit it, and many don't want to read raw markdown in a
+terminal. The viewer renders pages, makes citations clickable through to source cards, and
+lets the PM select any text and leave a note. Notes go to an append-only log rather than
+into the page: the PM never has to think about format, and the agent decides whether a note
+is a correction, a question, a lesson for the review log or a request. Each note stores the
+quoted text with some context and the commit it was written against, because pages change
+before notes are processed; `tools/wiki.py notes` finds the quote again.
+
+Reports are the other half of reading. PMs ask for comparisons and scans ("where do the
+in-flight PRDs conflict?") that they want to come back to. Holding them to page rules would
+make them slow to write, so they get a light header (question, date, sources) and stay
+snapshots. They never become evidence for pages: durable facts move into pages with their
+original citations, which keeps the wiki from citing its own summaries.
+
+## One front door
+A PM shouldn't have to learn eighteen skill names. Most requests arrive in plain language
+and Claude matches them to a skill by its description. `/wiki` is the explicit fallback: a
+short router that only runs when typed, so it never adds a hop to ordinary requests. With no
+argument it shows what needs attention; `/wiki cheatsheet` shows the workspace's
+`CHEATSHEET.md`, which the viewer also uses as its home page. Upkeep (notes, rechecks, lint)
+is offered by the agent at the start of a session instead of being something the PM must
+remember. Skills stay separate behind the router because each run then loads only the text
+it needs, and each skill can be evaluated on its own.
+
+## Freshness
+Sources pulled from a live system (a Confluence page, a ticket) go stale silently. A global
+age rule ("re-check anything older than two days") fires on every source forever and costs
+a model call each time. Instead, each card records the original's version, when it was last
+checked, and how often it is worth checking for its type: weekly for draft PRDs, never for a
+PDF export. Detection is a metadata comparison a small model can do in the background,
+without blocking the answer. Writing changes back into the wiki goes through normal ingest on
+the default model, because a new version can contradict pages, reports and approved answers,
+and that needs judgment.
+
+## Migration
+Many PMs start with an ad-hoc wiki before they find a toolkit. Re-ingesting from scratch
+throws away the pages they value. `MIGRATION.md` classifies files by role rather than
+location, moves instead of deletes, adds citations where they can be traced and labels the
+rest, and runs on a git branch. It never stops for questions: migrations are long and often
+run unattended, so it takes the conservative choice and logs a question for the PM instead.

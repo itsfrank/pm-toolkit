@@ -10,7 +10,11 @@ Output: `work/<slug>/intake.md` and `work/<slug>/questions.md`.
 
 ## Steps
 1. Read `ask.md`, `wiki/INDEX.md`, `wiki/glossary.md` and `wiki/pages/topics/about-me.md` if
-   present. Skim wiki pages whose names or aliases obviously match the ask.
+   present. Skim wiki pages whose names or aliases obviously match the ask, and reports in
+   `wiki/reports/INDEX.md` on related topics (overlap scans especially). If read-only
+   connectors are available, run a few searches for the ask's key terms to spot related
+   work in flight; cite what you rely on after saving it (`wiki-ingest`), otherwise list it
+   as leads to check.
 2. Write `intake.md` with the sections below. Keep it to two pages or less.
 3. Write or extend `questions.md` grouped by who should answer, with a priority
    (**blocking** / important / nice), and an empty answer field.

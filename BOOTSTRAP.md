@@ -1,15 +1,19 @@
 # Bootstrap: instructions for the agent installing pm-toolkit
 
 You are a coding agent (Claude Code or similar). The user downloaded this repository, most
-likely as a zip, and wants a PM workspace set up. Follow these steps exactly. Don't run any
-scripts from this repository during setup; everything here is markdown and copying files is
-all that's needed.
+likely as a zip, and wants a PM workspace set up. Follow these steps exactly. Setup is copying files; don't
+run scripts from this repository during setup. The workspace gets small helper scripts in
+`tools/` (Python standard library only) that the skills use later.
 
 ## 0. Before anything
 - Tell the user to confirm their employer allows using an outside open-source toolkit and
   AI assistance on work documents. You can't verify this; just make sure they've considered it.
 - Ask where the workspace should live (an empty folder, e.g. `~/pm-workspace`). Internal
   documents will go there, so it should not be inside a synced public repo.
+- If the folder already holds a knowledge base (markdown notes, copied documents, an
+  index, agent instructions) that wasn't built with pm-toolkit, follow
+  `$KIT/plugin/MIGRATION.md` instead of the steps below. It runs without stopping for
+  questions and works on a git branch the user reviews.
 - Note the unzipped toolkit path (call it `$KIT`) and the version in
   `$KIT/plugin/.claude-plugin/plugin.json`.
 

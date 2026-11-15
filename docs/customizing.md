@@ -32,7 +32,7 @@ uses it when present and keeps its evidence rules.
 of detail, which sections are mandatory, and recurring questions. `critical-review` reads it.
 
 ## 6. Edit skills
-Skills are plain markdown in `.claude/skills/` (copy mode). Change steps, templates or tone
+Skills are plain markdown in `.claude/skills/` (copy mode); helper scripts are in `tools/`. Change steps, templates or tone
 directly. Keep the evidence rules; most of the toolkit's value depends on them.
 
 ## Other domains

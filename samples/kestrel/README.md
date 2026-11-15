@@ -18,7 +18,10 @@ It has the same layout as `plugin/workspace/`:
   there to try `review-feedback` backfill mode).
 - `work/2026-10-05-eu-data-residency/ask.md`: a live ask from the VP Product.
 
-The scenario's "today" is early October 2026.
+The scenario's "today" is early October 2026. The helper scripts and viewer follow
+`PM_TODAY` when it is set, so pin it to keep source freshness consistent:
+`PM_TODAY=2026-10-06 python3 tools/viewer/serve.py --open`. On that date one source,
+S-0014 (a competitor web page last checked in 2025), is due for a recheck.
 
 ## Try it
 1. Copy this folder somewhere outside the repo, e.g. `cp -R samples/kestrel ~/kestrel-demo`.

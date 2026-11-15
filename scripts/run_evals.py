@@ -17,6 +17,7 @@ import concurrent.futures
 import datetime
 import difflib
 import json
+import os
 import pathlib
 import re
 import shutil
@@ -24,10 +25,12 @@ import subprocess
 import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-STRONG_SKILLS = {"coverage-review", "critical-review", "prd", "pre-prd"}
+STRONG_SKILLS = {"coverage-review", "critical-review", "prd", "pre-prd", "migration"}
 ALLOWED = ["Read", "Write", "Edit", "Glob", "Grep", "Skill", "Task",
            "Bash(ls:*)", "Bash(grep:*)", "Bash(find:*)", "Bash(cat:*)", "Bash(head:*)",
-           "Bash(wc:*)", "Bash(mkdir:*)", "Bash(cp:*)", "Bash(diff:*)", "Bash(date:*)"]
+           "Bash(wc:*)", "Bash(mkdir:*)", "Bash(cp:*)", "Bash(diff:*)", "Bash(date:*)",
+           "Bash(python3 tools/wiki.py:*)", "Bash(git:*)", "Bash(mv:*)"]
+SKIP = {".claude", ".git"}
 DENIED = ["WebFetch", "WebSearch"]
 
 
@@ -36,6 +39,8 @@ def workspace_for(case, sample):
     shutil.copytree(sample, tmp, dirs_exist_ok=True, ignore=shutil.ignore_patterns("evals"))
     for name in ("AGENTS.md", "CLAUDE.md"):
         shutil.copy(ROOT / "plugin" / "workspace" / name, tmp / name)
+    shutil.copytree(ROOT / "plugin" / "workspace" / "tools", tmp / "tools", dirs_exist_ok=True,
+                    ignore=shutil.ignore_patterns("__pycache__"))
     skills = tmp / ".claude" / "skills"
     for skill in (ROOT / "plugin" / "skills").iterdir():
         if skill.is_dir() and skill.name != "setup":
@@ -48,10 +53,12 @@ def workspace_for(case, sample):
     return tmp
 
 
-def claude(prompt, cwd, model, timeout):
+def claude(prompt, cwd, model, timeout, today=None):
     cmd = ["claude", "-p", prompt, "--model", model, "--permission-mode", "acceptEdits",
            "--allowedTools", *ALLOWED, "--disallowedTools", *DENIED]
-    out = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout)
+    # Pin tools/wiki.py dates (freshness, status) to the sample's scenario date.
+    env = dict(os.environ, PM_TODAY=today) if today else None
+    out = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout, env=env)
     return out.stdout + (("\n[stderr]\n" + out.stderr) if out.returncode else "")
 
 
@@ -67,13 +74,13 @@ def find_output(ws, case):
 
 def snapshot(ws):
     return {p: p.read_text(encoding="utf-8", errors="replace")
-            for p in ws.rglob("*") if p.is_file() and ".claude" not in p.parts}
+            for p in ws.rglob("*") if p.is_file() and not SKIP & set(p.parts)}
 
 
 def changed_files(ws, before, out):
     parts = []
     for p in sorted(ws.rglob("*")):
-        if not p.is_file() or ".claude" in p.parts or p == out:
+        if not p.is_file() or SKIP & set(p.parts) or p == out:
             continue
         text = p.read_text(encoding="utf-8", errors="replace")
         if p not in before:
@@ -91,7 +98,7 @@ def run_case(case, facts, args, outdir):
     ws = workspace_for(case, args.sample)
     before = snapshot(ws)
     model = args.strong_model if case["skill"] in STRONG_SKILLS else args.model
-    transcript = claude(case["prompt"], ws, model, args.timeout)
+    transcript = claude(case["prompt"], ws, model, args.timeout, args.today)
     out = find_output(ws, case)
     output = out.read_text(encoding="utf-8") if out else "(no output file produced)"
     case_dir = outdir / case["id"]
@@ -138,6 +145,7 @@ def main():
 
     data = json.loads((ROOT / args.cases).read_text(encoding="utf-8"))
     facts = data.get("planted_facts") or data.get("gold_facts") or []
+    args.today = data.get("scenario_today")
     cases = [c for c in data["cases"]
              if (c["id"] in args.case) or (not args.case and (args.all or c.get("core")))]
     stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")

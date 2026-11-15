@@ -5,8 +5,15 @@ description: Health-check the PM wiki - uncited claims, stale pages, unresolved 
 
 # Wiki lint
 
-Output: a report in chat (or `work/YYYY-MM-DD-wiki-lint.md` if long). Fix only after the user
-approves; small mechanical fixes (index lines, broken relative links) can be batched.
+Output: `work/YYYY-MM-DD-wiki-lint.md` (status uses its date to know when the last check
+ran) and a short summary in chat. Fix only after the user approves; small mechanical fixes
+(index lines, broken relative links) can be batched.
+
+Start with `python3 tools/wiki.py lint` (add `--json` for every item). It covers the
+mechanical checks: uncited candidates, dangling citations, broken links, index drift,
+orphans, unused sources, raw files without cards, card fields to fill, stale pages, old
+reports, sources due for a recheck and open notes. Read the flagged items before reporting
+them: the uncited check is a heuristic. Then do the judgment checks below by reading.
 
 ## Checks
 1. **Uncited facts:** lines in `pages/` stating facts without `[S-NNNN]` or a label.
@@ -24,6 +31,12 @@ approves; small mechanical fixes (index lines, broken relative links) can be bat
     probe for any `review` or `backfill` entry, and for any pattern seen two or more times
     across entries of any origin (`asked`, `confirmed-sim` included). A single
     `confirmed-sim` or `asked` entry stays in the log until it recurs.
+11. **Freshness:** sources due for a recheck; suggest `wiki-refresh`. Cards superseded by a
+    newer version whose facts are still cited on pages.
+12. **Reports:** reports missing the required header, and reports older than 60 days that
+    pages or answers seem to rely on.
+13. **People pages:** opinions or personal details that don't belong (see `wiki/README.md`).
+14. **Open notes:** count of open and `needs-info` notes; suggest `wiki-notes`.
 
 ## Report format
 Counts per check, then the top 10 fixes ranked by how much they would mislead a reader if

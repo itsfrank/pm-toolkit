@@ -1,7 +1,9 @@
 # Security and data boundaries
 
-`pm-toolkit` is plain Markdown: skills, templates and a wiki. It needs no connectors,
-MCP servers, hooks, background jobs or external write access. That makes it easier to keep
+`pm-toolkit` is Markdown skills, templates and a wiki, plus a few helper scripts and a local
+viewer that use only the Python standard library and plain browser JavaScript. It needs no
+connectors, MCP servers, hooks, background jobs, package installs or external write access.
+The viewer listens on 127.0.0.1 only and writes one file, `wiki/notes.jsonl`. That makes it easier to keep
 the toolkit inside your employer's rules, but it does not enforce those rules. Your
 employer's policy and your tool's enforced permissions are the real controls.
 
@@ -79,7 +81,11 @@ Claude Code's MCP documentation gives the same warning about external content
 - "Read-only" protects source integrity, not confidentiality. A read-only search tool can
   still send confidential text out in its query arguments.
 - If you later add a connector, add one, with narrow scopes, after approval. Keep it read-only
-  until retrieval quality has been shown to be good. Admins should inventory every connector
+  until retrieval quality has been shown to be good. The workspace rules tell the agent to use
+  every connector for reading only, even one that allows writes; if your client can disable a
+  connector's write tools, do that too, because a rule is guidance and a permission is a
+  control. Freshness checks (`wiki-refresh`) only read metadata and content of documents the
+  wiki already cites. Admins should inventory every connector
   surface ([Managed MCP](https://code.claude.com/docs/en/managed-mcp)).
 
 ## 6. Human approval before anything leaves the machine

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PM Wiki</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <button id="toggle-side" class="icon" title="Files" aria-label="Toggle file list">☰</button>
+  <a href="#/" class="brand">PM Wiki</a>
+  <a href="#/wiki/INDEX.md" class="opt">Index</a>
+  <span id="status" class="opt status"></span>
+  <label class="opt"><input type="checkbox" id="uncited"> Highlight uncited</label>
+  <button id="toggle-notes" class="icon" title="Notes" aria-label="Toggle notes">✎ <span id="note-count">0</span></button>
+</header>
+<div class="layout">
+  <nav id="side">
+    <div class="search-row">
+      <input id="search" type="search" placeholder="Search text (Enter)…" aria-label="Search">
+      <button id="clear-x" class="icon" title="Clear search (Esc)" aria-label="Clear search" hidden>✕</button>
+    </div>
+    <input id="filter" type="search" placeholder="Filter files…" aria-label="Filter files">
+    <div id="results"></div>
+    <div id="tree"></div>
+  </nav>
+  <main id="main"><article id="doc"></article></main>
+  <aside id="notes"><h2>Notes</h2><ul id="note-list"></ul></aside>
+</div>
+<button id="note-btn" hidden>Note</button>
+<div id="note-box" hidden>
+  <div class="quote" id="note-quote"></div>
+  <textarea id="note-text" rows="3" placeholder="Your note. Enter saves, Shift+Enter new line, Esc cancels."></textarea>
+</div>
+<div id="tip" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>

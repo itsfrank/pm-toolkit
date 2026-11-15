@@ -4,8 +4,9 @@ Claude Code skills and a cited, local wiki for product managers. It focuses on t
 and riskiest part of the job: getting from a vague ask ("we need X") to a PRD you're
 confident is complete and accurate.
 
-- **Markdown only.** No scripts, hooks, MCP servers or connectors are needed to use it.
-  Everything is readable in a few minutes, which makes it easy to review and approve.
+- **Easy to review.** Skills are markdown; a few helper scripts and a local viewer use only
+  the Python standard library and plain browser JavaScript. No installs, hooks, MCP servers
+  or connectors are needed, which makes it easy to review and approve.
 - **Local first.** Your documents stay in your workspace. The agent never sends anything
   anywhere.
 - **Evidence-based.** Every claim is cited to a source card or labeled as inferred,
@@ -14,6 +15,10 @@ confident is complete and accurate.
   same gap doesn't come up twice.
 
 ## What it does
+
+You don't need to remember any of this. Talk in plain language, or start with `/wiki` to
+be sure the toolkit handles it: `/wiki` alone shows what needs your attention, and
+`/wiki cheatsheet` shows a one-page guide to what you can ask. The skills behind it:
 
 | Skill | Use it when |
 |---|---|
@@ -29,8 +34,12 @@ confident is complete and accurate.
 | `customer-call` | Prep before and debrief after customer calls; files the evidence. |
 | `competitive` | Dated, scoped and sourced competitor claim cards and comparisons. |
 | `marketing-check` | Fact-check marketing and sales copy against what the product does. |
+| `report` | Research a question and write a cited, dated report you can read later. |
 | `wiki-ingest` / `wiki-lint` | Grow and maintain the wiki. |
+| `wiki-notes` | Process the notes you left on pages in the viewer. |
+| `wiki-refresh` | Check saved sources against their originals (read-only connector) and re-ingest changes. |
 | `setup` | Create or upgrade the workspace. |
+| `wiki` | The front door: `/wiki <anything>` routes to the right skill; only runs when you type it. |
 
 ## How it works
 
@@ -39,8 +48,14 @@ wiki/raw/        saved documents (immutable)      ──┐
 wiki/sources/    one card per source: trust, date   ├─►  wiki/pages/  cited, curated pages
 wiki/lenses.md   coverage checklist (editable)      │    wiki/INDEX.md one line per page
 wiki/review-log  lessons from real reviews  ────────┘
+wiki/reports/    research you asked for (dated snapshots)
+wiki/notes.jsonl your notes from the viewer, processed by wiki-notes
 work/<ask>/      ask → intake → landscape → coverage → prd → critical review
+tools/           wiki.py (IDs, cards, lint, freshness, notes) and the viewer
 ```
+
+To read the wiki in a browser and leave notes on any line, say `/wiki open` (or run
+`python3 tools/viewer/serve.py --open` in your workspace). It listens on this machine only.
 
 The wiki follows the "LLM wiki" pattern: the agent writes and maintains pages from raw
 sources, and an index keeps each task's reads small. See [docs/design.md](docs/design.md)
@@ -52,6 +67,13 @@ Download the repository (or a release zip), open Claude Code in the folder where
 your workspace, and say:
 
 > Read `<path-to-pm-toolkit>/BOOTSTRAP.md` and set up my PM workspace.
+
+Already have a wiki or notes folder that agents built? Say instead:
+
+> Read `<path-to-pm-toolkit>/plugin/MIGRATION.md` and migrate my knowledge base.
+
+It brings an existing knowledge base under the toolkit's conventions on a git branch,
+without deleting anything, and logs its questions for you instead of stopping.
 
 [BOOTSTRAP.md](BOOTSTRAP.md) is written for the agent. It offers two modes: copying the
 skills into your workspace (recommended) or installing them as a Claude Code plugin.
@@ -70,7 +92,7 @@ toolkit and can be deleted.
 
 | Path | What |
 |---|---|
-| `plugin/` | The toolkit: `skills/`, the `workspace/` template, plugin manifest |
+| `plugin/` | The toolkit: `skills/`, the `workspace/` template (with `tools/`), `MIGRATION.md`, plugin manifest |
 | `samples/` | Fictional example workspace (optional) |
 | `evals/` | Regression cases for the skills, run against `samples/` |
 | `docs/` | Design rationale, research, security, customization |
