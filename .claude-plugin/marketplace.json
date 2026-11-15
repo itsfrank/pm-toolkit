@@ -1,0 +1,11 @@
+{
+  "name": "pm-toolkit",
+  "owner": { "name": "itsfrank" },
+  "plugins": [
+    {
+      "name": "pm-toolkit",
+      "source": "./plugin",
+      "description": "Pre-PRD discovery, coverage review, PRDs, RFPs, gap analysis and a cited local wiki for product managers."
+    }
+  ]
+}

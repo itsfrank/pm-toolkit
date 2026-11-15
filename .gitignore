@@ -1,0 +1,12 @@
+# Private, machine-local material. Never commit.
+.private/
+CLAUDE.local.md
+AGENTS.local.md
+
+# OS / editor
+.DS_Store
+*.swp
+__pycache__/
+
+# Eval run outputs
+evals/results/
