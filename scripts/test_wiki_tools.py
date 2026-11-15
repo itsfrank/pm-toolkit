@@ -89,6 +89,30 @@ class WikiTools(unittest.TestCase):
         self.assertRegex(out, r"  5 p\.7: \(new: .*35")
         self.assertIn("  6 p.7: (new: eu) EU support", out)  # stoplisted words aren't details
 
+    # due, cards-from-raw, catalog-search
+    def test_due_skips_superseded_cards(self):
+        self.assertIn("S-0014", self.run_wiki("due"))
+        card = self.ws / "wiki/sources/S-0014.md"
+        card.write_text(card.read_text().replace("---\n", "---\nsuperseded_by: S-0099\n", 1))
+        self.assertNotIn("S-0014", self.run_wiki("due"))
+
+    def test_cards_from_raw_takes_origin_only_from_first_line(self):
+        self.write("wiki/raw/2026-10-04-linked.md",
+                   "https://wiki.example/pages/123\n# Linked page\nSee https://other.example/x.\n")
+        self.write("wiki/raw/2026-10-04-mentions.md",
+                   "# Call notes\n\nThey showed https://competitor.example/pricing on screen.\n")
+        out = self.run_wiki("cards-from-raw", "--dry-run")
+        self.assertRegex(out, r"raw/2026-10-04-linked\.md  https://wiki\.example/pages/123")
+        self.assertRegex(out, r"raw/2026-10-04-mentions\.md  \(no origin url\)")
+
+    def test_catalog_search_ties_newest_first(self):
+        self.write("wiki/catalog/t.md", "# Catalog\n\n"
+                   "- [ ] [Gizmo plan A](https://x.example/1) · id: 1 · modified: 2025-01-01\n"
+                   "- [ ] [Gizmo plan B](https://x.example/2) · id: 2 · modified: 2026-05-01\n"
+                   "- [ ] [Gizmo plan C](https://x.example/3) · id: 3 · labels: gizmo · modified: 2024-01-01\n")
+        titles = re.findall(r"\] (Gizmo plan \w)", self.run_wiki("catalog-search", "gizmo"))
+        self.assertEqual(titles, ["Gizmo plan C", "Gizmo plan B", "Gizmo plan A"])
+
 
 if __name__ == "__main__":
     unittest.main()

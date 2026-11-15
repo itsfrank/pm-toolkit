@@ -146,7 +146,8 @@ def guess_card(wiki, raw):
         (l.lstrip("# ").strip() for l in body.splitlines() if l.startswith("# ")), None)
     if not title:
         title = re.sub(r"^\d{4}-\d{2}-\d{2}-", "", raw.stem).replace("-", " ").capitalize()
-    url = fields.get("source") or fields.get("url") or next(iter(URL.findall(head)), "")
+    first = next((l for l in body.splitlines() if l.strip()), "")  # connector saves put the URL here
+    url = fields.get("source") or fields.get("url") or next(iter(URL.findall(first)), "")
     m = re.match(r"(\d{4}-\d{2}-\d{2})", raw.name)
     captured = m.group(1) if m else datetime.date.fromtimestamp(raw.stat().st_mtime).isoformat()
     page_id = re.search(r"pageId=(\d+)|/pages/(\d+)", url or "")
@@ -182,9 +183,14 @@ def cmd_cards_from_raw(wiki, args):
 
 
 def due(wiki, today):
+    """Cards whose origin should be compared again. Superseded cards are skipped."""
     out = []
-    for sid, (path, f, _) in wiki.cards().items():
+    cards = wiki.cards()
+    replaced = {str(f.get("supersedes", "")).strip() for _, f, _ in cards.values()}
+    for sid, (path, f, _) in cards.items():
         days = str(f.get("recheck_days", "")).strip()
+        if f.get("superseded_by") or sid in replaced:
+            continue
         if not (f.get("origin_url") or f.get("origin_id")) or days in ("", "never"):
             continue
         last = parse_date(f.get("last_checked") or f.get("captured") or "")
@@ -256,7 +262,8 @@ def catalog_search(wiki, terms, show_all=False):
         score = sum(w for t in terms for k, w in weight.items() if t in hay[k])
         if score:
             rows.append((score, e))
-    rows.sort(key=lambda r: (-r[0], r[1].get("modified", "")), reverse=False)
+    rows.sort(key=lambda r: r[1].get("modified", ""), reverse=True)  # ties: newest first
+    rows.sort(key=lambda r: -r[0])
     return terms, rows
 
 
