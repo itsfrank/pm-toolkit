@@ -5,7 +5,8 @@ with the expected fields, and mark items the model answers unaided.
 
 Questions come from .private/ext-packs/_maps/<pack>-probe.json, written by the pack
 builder in the ORIGINAL (unrenamed) terms, so the probe measures memorization of the
-source itself: [{"id", "question", "keys": {"<field>": "<expected value>", ...}}].
+source itself: [{"id", "question", "keys": {"<field>": "<expected value>", ...}}]; items
+with "skip": true are left out.
 Results go to <pack>/probe.json and replace the "Contamination probe" section of
 <pack>/README.md.
 
@@ -41,7 +42,8 @@ def main():
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--model", default="sonnet")
     args = ap.parse_args()
-    items = json.loads((EXT / "_maps" / f"{args.pack}-probe.json").read_text())
+    items = [i for i in json.loads((EXT / "_maps" / f"{args.pack}-probe.json").read_text())
+             if not i.get("skip")]  # workspace-only facts have nothing to probe
     if args.limit:
         items = items[:args.limit]
     before = ledger_total(f"{args.pack}:probe")

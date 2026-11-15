@@ -305,13 +305,12 @@ def grade(case, facts, run, args, reuse=None):
     find_ids, not_ids = [i["id"] for i in judge_find], [i["id"] for i in judge_not]
     verdicts = {}
     prompt = judge_prompt(case, judge_find, judge_not, facts, run["output"], run["changed"], run["reply"], sources)
-    if (judge_find or judge_not) and reuse is not None:  # --reuse-verdicts: no new judge calls
+    if judge_find or judge_not:
         for name in args.graders:
-            v = reuse.get(name) or {"error": f"no saved {name} verdict"}
-            bad = invalid(v, find_ids, not_ids)
-            verdicts[name] = {"error": f"{name}: {bad}"} if bad else v
-    elif judge_find or judge_not:
-        for name in args.graders:
+            saved = (reuse or {}).get(name)  # --reuse-verdicts: call only judges without a valid saved verdict
+            if saved and not invalid(saved, find_ids, not_ids):
+                verdicts[name] = saved
+                continue
             for _ in range(2):  # one retry, then the run is excluded
                 v, cost = call_judge(name, prompt, args.timeout)
                 bad = invalid(v, find_ids, not_ids)
@@ -533,7 +532,7 @@ def main():
     ap.add_argument("--no-connector", action="store_true",
                     help="control arm: run connector cases without the fake connector")
     ap.add_argument("--reuse-verdicts", action="store_true",
-                    help="regrade: re-score saved judge verdicts without new judge calls")
+                    help="regrade: keep valid saved verdicts; call only judges that have none")
     args = ap.parse_args()
     args.graders = [g for g in args.graders.split(",") if g]
     if any(g not in JUDGES for g in args.graders):
