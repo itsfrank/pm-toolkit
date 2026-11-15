@@ -84,9 +84,11 @@ def workspace_for(case, args):
 
 
 def connector_config(case, args, run_dir):
-    if not case.get("connector"):
+    if not case.get("connector") or args.no_connector:
         return None, None
     pages = next((p for p in (args.cases_dir / case["connector"], ROOT / case["connector"]) if p.is_dir()), None)
+    if pages is not None and (pages / "pages").is_dir():  # pack layout: connector/pages/<id>.md
+        pages = pages / "pages"
     if pages is None:
         raise FileNotFoundError(f"connector pages {case['connector']} for {case['id']}")
     log = run_dir / "connector-log.jsonl"
@@ -262,7 +264,9 @@ def grade(case, facts, run, args, reuse=None):
     hay = norm(ctx["haystack"])
     mech_find = {i["id"]: mechanical(i, ctx) for i in case["must_find"]}
     mech_not = {i["id"]: mechanical(i, ctx) for i in case["must_not"]}
-    judge_find = [i for i in case["must_find"] if mech_find[i["id"]] is None]
+    # `check` items are decided by the runner alone; must_find items with `log_check` need
+    # the log check AND the judges (the log shows the page was fetched, judges the use of it).
+    judge_find = [i for i in case["must_find"] if mech_find[i["id"]] is None or "log_check" in i]
     judge_not = [i for i in case["must_not"] if mech_not[i["id"]] is None]
     sources = cited_sources(ctx["ws"], run["output"] + run["changed"]) if ctx["ws"].exists() else "(workspace gone)"
     verdicts = {}
@@ -289,8 +293,10 @@ def grade(case, facts, run, args, reuse=None):
         for it in pool:
             iid = it["id"]
             # A vote is True when the item is found (must_find) or violated (must_not).
-            if mech[iid] is not None:
+            if mech[iid] is not None and not (kind == "find" and "log_check" in it):
                 ys, who = [bool(mech[iid])], ["mechanical"]
+            elif mech[iid] is False:  # log check failed: not found, whatever the judges say
+                ys, who = [False], ["log_check"]
             else:
                 ys = [{"yes": True, "no": False}.get(votes[n].get(iid, "no")) for n in verdicts]
                 who = list(verdicts)
@@ -299,7 +305,7 @@ def grade(case, facts, run, args, reuse=None):
             items[iid] = {"kind": kind, "critical": it.get("critical", kind == "not"),
                           "strict": all(y is True for y in ys) if kind == "find" else any(y is not False for y in ys),
                           "lenient": any(y is True for y in ys) if kind == "find" else all(y is True for y in ys),
-                          "votes": dict(zip(who, ys)), "mechanical": mech[iid] is not None}
+                          "votes": dict(zip(who, ys)), "mechanical": who[0] in ("mechanical", "log_check")}
     # Any write attempt through the connector is an automatic violation.
     if any(c["outcome"] == "write-attempt" for c in ctx["log"]):
         items["MN-connector-write"] = {"kind": "not", "critical": True, "strict": True, "lenient": True,
@@ -399,6 +405,7 @@ def meta_for(args, data_path):
     except OSError:
         commit = "?"
     return {"kit": str(args.kit), "kit_commit": commit, "arm": args.arm, "sample": str(args.sample),
+            "connector": not args.no_connector,
             "cases_sha": sha(data_path), "grader_sha": sha(ROOT / "evals" / "GRADER.md"),
             "judges": [f"{g}={JUDGES[g]}" for g in args.graders], "repeat": args.repeat,
             "model": args.model, "strong_model": args.strong_model}
@@ -456,6 +463,8 @@ def main():
     ap.add_argument("--cases", default="evals/cases.json")
     ap.add_argument("--kit", default=".", help="toolkit checkout whose plugin/ is tested")
     ap.add_argument("--arm", choices=["full", "agents-only", "none"], default="full")
+    ap.add_argument("--no-connector", action="store_true",
+                    help="control arm: run connector cases without the fake connector")
     ap.add_argument("--reuse-verdicts", action="store_true",
                     help="regrade: re-score saved judge verdicts without new judge calls")
     args = ap.parse_args()
