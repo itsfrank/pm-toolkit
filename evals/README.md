@@ -14,9 +14,14 @@ surfacing conflicts, not overclaiming, and ignoring instructions inside document
 ## Files
 - `fixtures/`: inputs some cases copy into the workspace (a weak PRD, an email, feedback).
 - `cases.json`: `planted_facts` (the gold: every planted fact and the files that hold it)
-  and `cases` (`id`, `skill`, `core`, `prompt`, `fixtures[]`, `output_file`, `must_find[]`, `must_not[]`,
-  `notes`). `must_find` items carry `critical` and, where relevant, the `fact` they test.
-- `GRADER.md`: judge prompt. Returns `{case_id, pass, found, missed, violations, notes}`.
+  and `cases` (`id`, `skill`, `core`, `kind` (`regression` or `capability`), `prompt`,
+  `fixtures[]`, `output_file`, `must_find[]`, `must_not[]`, `notes`, optional `connector`).
+  `must_find` items carry `critical` and, where relevant, the `fact` they test. An item with
+  `check` (`file_exists`, `contains`, `regex`) or `log_check` (`fetched`, `not_fetched`,
+  `searched_alias`) is decided by the runner, not the judges.
+- `GRADER.md`: the judge prompt. Judges return a verdict and an exact quote per item.
+- `tools/fake_connector.py`: a read-only fake document connector (MCP over stdio) for cases
+  that test searching beyond the wiki. It logs every call; write tools are traps.
 
 ## Run one case manually
 1. Copy the sample to a fresh temp directory (every case starts from a clean copy):
@@ -33,26 +38,30 @@ surfacing conflicts, not overclaiming, and ignoring instructions inside document
    referenced planted facts and the output. Read the JSON verdict.
 
 ## Run headlessly
-`python3 scripts/run_evals.py` runs the core cases (`--all` for every case, `--case <id>` for
-one), each in a fresh temp copy with no web tools, grades them with `GRADER.md` and writes
-outputs, transcripts and verdicts to `evals/results/` (gitignored). By hand:
 ```
-cd "$T"
-claude -p "<case prompt>" > transcript.txt
+python3 scripts/run_evals.py                      # core cases, once
+python3 scripts/run_evals.py --all --repeat 3     # every case, three times
+python3 scripts/run_evals.py --case rfp-halvard --graders opus
+python3 scripts/run_evals.py --kit ../other-checkout   # test another version's plugin/
+python3 scripts/run_evals.py --arm agents-only    # ablation: none | agents-only | full
+python3 scripts/run_evals.py regrade evals/results/<stamp>   # re-grade saved outputs
 ```
-Then grade `"$T/<output_file>"` (plus `transcript.txt` when the case notes ask for the final
-reply) with `GRADER.md`, for example with another `claude -p` call that includes the grader
-prompt, the case JSON and the output. Headless runs can't answer permission prompts; allow
-file edits for the temp directory only (e.g. `--permission-mode acceptEdits`), and never
-give eval runs network tools or connectors. Some cases chain skills (landscape-map runs
-intake first, prd runs the whole discovery), so their outputs and dates can vary; output
-folder dates in `output_file` are a guide, grade the file the run produced.
+Each run gets a fresh temp copy of the sample with the skills and tools, the scenario date
+(`PM_TODAY`), no web tools, no user-level settings or memory (`--setting-sources project`,
+`--strict-mcp-config`) and, for `connector` cases, the fake connector. The runner records
+cost and turns from `--output-format json`.
 
-The runner also copies `plugin/workspace/tools/` into each workspace and allows
-`python3 tools/wiki.py` and `git` (the migration case works on a branch); `.git/` is left
-out of the graded diff. `migrate-legacy-kb` copies a messy pre-toolkit knowledge base from
-`fixtures/legacy-kb/` into `old-kb/` and runs `MIGRATION.md` unattended on the strong
-model; it is the most expensive case.
+**Grading.** Two judges with pinned models (`JUDGES` in the runner) grade every run:
+Claude (`claude -p`) and Codex (`codex exec`). Each `found` or `violated` verdict must quote
+the output; a quote the runner can't find counts against it. When the judges disagree the
+item is `disputed`, and the summary reports two pass rates with Wilson 95% intervals:
+**strict** (a critical item needs both judges; a violation needs one) and **lenient** (one
+judge suffices for an item; a violation needs both). The truth lies between them. Timeouts
+and unparseable verdicts are errors, excluded from the rates. Results go to
+`evals/results/<stamp>/` (gitignored): per run `output.md`, `changed.md`, `reply.md`,
+`grade.json`, and a `summary.md`, `summary.json` and `disputes.md` for hand labeling.
+Changing `GRADER.md` or a judge model changes the numbers: re-grade saved runs with
+`regrade` before comparing with older results.
 
 ## Cost and when to run
 Each case is a full agent run over about 60 files, and coverage, critical-review and prd
@@ -60,7 +69,7 @@ cases chain several skills and should use the strongest model. Expect a full sui
 a significant number of tokens. Run the `core: true` cases (intake, landscape, coverage,
 critical review, RFP, marketing check, review-log backfill, injection safety) on every model change or skill edit;
 run the full suite before a release. Run each case two or three times when judging a change:
-single runs are noisy.
+single runs are noisy. Use `--repeat 3` and compare intervals, not single verdicts.
 
 ## Adding a case
 Plant the fact in the sample first (raw doc plus card, and a page only if it should be
