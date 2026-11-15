@@ -30,6 +30,7 @@ import pathlib
 import re
 import sys
 
+VERSION = "0.1.0"  # the toolkit release these tools came with; keep equal to plugin.json
 CITE = re.compile(r"\[(S-\d{4}[^\]]*)\]")
 SID = re.compile(r"S-\d{4}")
 LABELS = ("(inferred)", "(assumption)", "(unknown)")
@@ -613,7 +614,11 @@ def status(wiki, today):
         title = fields.get("title") or next((l[2:].strip() for l in body.splitlines() if l.startswith("# ")), path.stem)
         reports.append({"path": wiki.rel(path), "title": title})
     catalog = catalog_entries(wiki) if (wiki.wiki / "catalog").is_dir() else []
-    return {"open_notes": len([n for n in notes if n["status"] == "open"]),
+    marker = wiki.root / ".pm-toolkit-version"
+    installed = re.search(r"\d+\.\d+(\.\d+)?", read(marker)) if marker.exists() else None
+    return {"tools_version": VERSION, "installed_version": installed.group(0) if installed else None,
+            "upgrade_pending": bool(installed) and installed.group(0) != VERSION,
+            "open_notes": len([n for n in notes if n["status"] == "open"]),
             "catalog_pages": len(catalog), "catalog_ingested": len([e for e in catalog if e["done"]]),
             "unfinished_runs": sorted(wiki.rel(h.parent) for h in work.glob("*/HANDOFF.md")) if work.is_dir() else [],
             "needs_info_notes": len([n for n in notes if n["status"] == "needs-info"]),
@@ -639,6 +644,9 @@ def cmd_status(wiki, args):
         print(f"Catalogs: {s['catalog_ingested']} of {s['catalog_pages']} pages ingested")
     for folder in s["unfinished_runs"]:
         print(f"Unfinished run: {folder} (see HANDOFF.md)")
+    if s["upgrade_pending"]:
+        print(f"Upgrade: tools are {s['tools_version']}, .pm-toolkit-version says {s['installed_version']};"
+              " offer to finish the upgrade (setup, Upgrade)")
 
 
 def cmd_reports_index(wiki, args):

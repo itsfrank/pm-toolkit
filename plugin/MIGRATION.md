@@ -6,8 +6,8 @@ or topic pages, analyses, an index, agent instructions, a viewer and a notes log
 shape is unknown. Your job is to bring it under the toolkit's conventions **without losing
 anything** and **without waiting for the user**. Migrations often run unattended overnight.
 
-`$KIT` is the folder holding this file (`plugin/` of the toolkit). `$WS` is the workspace:
-by default the existing knowledge base itself, migrated in place. If the user named a
+`$KIT` is the toolkit's root folder (this file is `$KIT/plugin/MIGRATION.md`). `$WS` is the
+workspace: by default the existing knowledge base itself, migrated in place. If the user named a
 separate source folder, migrate from it into `$WS`.
 
 ## Ground rules
@@ -73,9 +73,9 @@ For large folders, read a sample of files per folder, classify the pattern, then
 Count files per role in the log. Commit: "migration: phase 1 inventory".
 
 ## Phase 2: toolkit files and instructions
-1. Copy `$KIT/workspace/` into `$WS` without overwriting anything (as in
-   `$KIT/skills/setup/SKILL.md` step 2), including `tools/`. Install the skills as the user's
-   setup expects (`.claude/skills/` in copy mode; skip `setup`).
+1. Copy `$KIT/plugin/workspace/` into `$WS` without overwriting anything (as in
+   `$KIT/plugin/skills/setup/SKILL.md` step 2), including `tools/`. Install the skills as the
+   user's setup expects (`.claude/skills/` in copy mode, including `setup`).
 2. Reconcile old instructions with the toolkit's `AGENTS.md`:
    - Keep the user's rules that don't conflict, under `## Local rules` at the end of
      `AGENTS.md`.
@@ -141,7 +141,7 @@ For each entity page:
 
 ## Phase 6: reports
 1. `git mv` each report into `wiki/reports/YYYY-MM-DD-slug.md`, dated by its last change.
-2. Add the report header (`$KIT/skills/report/SKILL.md`). If the original question isn't
+2. Add the report header (`$KIT/plugin/skills/report/SKILL.md`). If the original question isn't
    written down, reconstruct it and mark it `(reconstructed)`. `as_of` is the date it was
    last changed.
 3. Convert citations as in phase 5. Don't refresh the content; reports are snapshots.

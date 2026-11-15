@@ -25,7 +25,8 @@ S-0014 (a competitor web page last checked in 2025), is due for a recheck.
 
 ## Try it
 1. Copy this folder somewhere outside the repo, e.g. `cp -R samples/kestrel ~/kestrel-demo`.
-2. Copy the agent instructions in: `cp plugin/workspace/AGENTS.md plugin/workspace/CLAUDE.md ~/kestrel-demo/`.
+2. Copy the agent instructions and helper scripts in:
+   `cp -R plugin/workspace/AGENTS.md plugin/workspace/CLAUDE.md plugin/workspace/tools ~/kestrel-demo/`.
 3. Make the pm-toolkit skills available (install the plugin as described in the repo README).
 4. Open Claude Code in `~/kestrel-demo` and run:
    `pre-prd on work/2026-10-05-eu-data-residency/`

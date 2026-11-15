@@ -14,7 +14,7 @@ run scripts from this repository during setup. The workspace gets small helper s
   index, agent instructions) that wasn't built with pm-toolkit, follow
   `$KIT/plugin/MIGRATION.md` instead of the steps below. It runs without stopping for
   questions and works on a git branch the user reviews.
-- Note the unzipped toolkit path (call it `$KIT`) and the version in
+- Note the unzipped toolkit's root folder (call it `$KIT`) and the version in
   `$KIT/plugin/.claude-plugin/plugin.json`.
 
 ## 1. Choose an install mode (ask the user; recommend A)
@@ -28,7 +28,8 @@ can read, edit and review. No plugin system needed.
 ## 2. Install
 **Mode A**
 1. Create `<workspace>/.claude/skills/`.
-2. Copy every folder in `$KIT/plugin/skills/` there **except `setup`**.
+2. Copy every folder in `$KIT/plugin/skills/` there, including `setup` (it runs later
+   upgrades).
 3. Perform the setup yourself by following `$KIT/plugin/skills/setup/SKILL.md`, using
    `$KIT/plugin/workspace/` as the template directory.
 
@@ -57,4 +58,5 @@ date. Don't copy `samples/`, `evals/`, `docs/` or `scripts/` into the workspace.
 Unzip the new version alongside the old one. Mode A: compare `$KIT/plugin/skills/` with
 `.claude/skills/`, show the user the differences per skill, and update only those they approve
 (they may have customized skills). Then follow the Upgrade section of `setup/SKILL.md`. Mode B:
-update the plugin, then run `setup` to upgrade the workspace. Never overwrite `wiki/` content.
+update the plugin, then run `setup` to upgrade the workspace. Both: rewrite `.pm-toolkit-version`.
+Never overwrite `wiki/` content.

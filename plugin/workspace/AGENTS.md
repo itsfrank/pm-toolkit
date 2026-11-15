@@ -68,8 +68,8 @@ with the pm-toolkit skills. Follow these rules for every task.
   write it as a report with `report`.
 - Upkeep is the agent's job, not the PM's. At the start of a session, run
   `python3 tools/wiki.py status` once. If there are open notes, sources due for a recheck,
-  or a wiki check is due (over 30 days), say so in one line and offer to handle it
-  (`wiki-notes`, `wiki-refresh`, `wiki-lint`). Don't repeat the offer in the same session.
+  a wiki check due (over 30 days) or an upgrade to finish, say so in one line and offer to
+  handle it (`wiki-notes`, `wiki-refresh`, `wiki-lint`, `setup`). Don't repeat the offer in the same session.
 - The PM talks in plain language and may start with `/wiki`. Never require them to know a
   skill name.
 - After a task that taught us something durable (a new product fact, owner, initiative or
