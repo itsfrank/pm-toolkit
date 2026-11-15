@@ -873,6 +873,12 @@
           "id": "M8",
           "text": "Top issues listed in priority order with suggested rewrites.",
           "critical": false
+        },
+        {
+          "id": "M-raw",
+          "text": "Has a '## Raw details not in the wiki' section that accounts for the Collect ingest v3 Limitations (EU events received and buffered in us-east-1) [S-0005] and links it to the '100% stays in the EU' claim.",
+          "critical": false,
+          "fact": "F2"
         }
       ],
       "must_not": [
@@ -1059,6 +1065,12 @@
           "id": "CO5",
           "text": "Notes that S-0014 is due for a recheck against its original (last checked 2025-03-14) and, with no connector available, asks the PM to re-save the current page (wiki-refresh behaviour) rather than claiming it was checked.",
           "critical": false
+        },
+        {
+          "id": "CO-raw",
+          "text": "Has a '## Raw details not in the wiki' section (in the page update, comparison or reply) that accounts for the Collect us-east-1 buffering [S-0005] and uses it in Our position.",
+          "critical": false,
+          "fact": "F2"
         }
       ],
       "must_not": [

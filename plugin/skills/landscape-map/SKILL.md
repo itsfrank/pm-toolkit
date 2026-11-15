@@ -36,9 +36,10 @@ Output: `work/<slug>/landscape.md` (or `work/YYYY-MM-DD-landscape-<topic>/landsc
    `file:` export), save it to `wiki/raw/` with a card, use it, and tick its line with
    `catalog-mark`. List the other relevant hits under `## Unread pages` with their links.
 6. Write `landscape.md` (template below). Every row cites a source or says `(unknown)`.
-   Under `## Raw details not in the wiki`, account for every file `raw-hits` reported:
-   the fact, where you used it above, or why it doesn't bear on the topic. Offer to file
-   these with `wiki-ingest`.
+   Under `## Raw details not in the wiki`, write one line per file `raw-hits` reported,
+   stating its new fact in your own words [S-NNNN]; never group files or write "used as
+   cited". Then say where you used it above, or why it doesn't bear on the topic. Offer to
+   file these with `wiki-ingest`.
 
 ## landscape.md
 ```
@@ -67,7 +68,7 @@ Areas where the wiki has nothing. For each: who probably knows, what document mi
 ## Should talk to
 Ranked list with the specific question for each person.
 ## Raw details not in the wiki
-One line per file `raw-hits` reported: the fact [S-NNNN], where it is used, or why not.
+One line per file `raw-hits` reported: its new fact [S-NNNN], then where it is used, or why not.
 ## Unread pages
 Catalogued pages that likely matter but weren't read: title, link, why it may matter.
 ```

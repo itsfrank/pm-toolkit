@@ -355,9 +355,19 @@ def cmd_spend(wiki, args):
     print(f"total: ${s['usd']:.2f}" if s["usd"] is not None else f"total: unpriced ({s['note']})")
 
 
+TOKEN = re.compile(r"[a-z0-9][a-z0-9.\-]*[a-z0-9]")
+
+
+def distinctive(token):
+    """Words that carry a specific detail: codes and numbers (us-east-1, 72, v3) or long
+    technical words. Short common words are ignored."""
+    return any(c.isdigit() for c in token) or "-" in token or len(token) >= 8
+
+
 def raw_hits(wiki, terms, show_all=False, per_file=8):
-    """Lines in raw files that match a term which the file's card and the pages citing that
-    card never mention: the details summaries most often drop."""
+    """Lines in raw files that match a term and say something the file's card and the pages
+    citing it never mention: the term itself, or a distinctive word (a region code, a number,
+    a long technical word). These are the details summaries most often drop."""
     terms = [t.lower() for t in terms if len(t) >= 2]
     by_origin = {str(f.get("origin", "")): (sid, read(path).lower()) for sid, (path, f, _) in wiki.cards().items()}
     page_text = {p: read(p).lower() for p in wiki.pages()}
@@ -367,15 +377,20 @@ def raw_hits(wiki, terms, show_all=False, per_file=8):
             continue
         sid, card = by_origin.get(wiki.rel(raw).replace("wiki/", "", 1), (None, ""))
         summaries = card + "".join(t for t in page_text.values() if sid and sid.lower() in t)
+        known = set(TOKEN.findall(summaries))
         hits = []
         for n, line in enumerate(read(raw).splitlines(), 1):
             low = line.lower()
             matched = [t for t in terms if t in low]
+            if not matched:
+                continue
             new = [t for t in matched if t not in summaries]
-            if new or (show_all and matched):
+            new += sorted({w for w in TOKEN.findall(low) if distinctive(w) and w not in known} - set(new))
+            if new or show_all:
                 hits.append((n, new or matched, line.strip()))
         if hits:
-            out.append((wiki.rel(raw), sid, hits[:per_file], len(hits)))
+            hits.sort(key=lambda h: -len(h[1]))
+            out.append((wiki.rel(raw), sid, sorted(hits[:per_file]), len(hits)))
     return out
 
 
@@ -383,8 +398,8 @@ def cmd_raw_hits(wiki, args):
     rows = raw_hits(wiki, args.terms, args.all)
     for path, sid, hits, total in rows:
         print(f"{path}  [{sid or 'no card'}]")
-        for n, terms, line in hits:
-            print(f"  {n}: ({', '.join(terms)}) {line[:160]}")
+        for n, why, line in hits:
+            print(f"  {n}: (new: {', '.join(why[:6])}) {line[:160]}")
         if total > len(hits):
             print(f"  ... {total - len(hits)} more lines")
     print(f"{len(rows)} raw file(s) with details not in their card or pages"
