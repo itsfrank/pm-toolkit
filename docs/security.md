@@ -85,7 +85,12 @@ Claude Code's MCP documentation gives the same warning about external content
   every connector for reading only, even one that allows writes; if your client can disable a
   connector's write tools, do that too, because a rule is guidance and a permission is a
   control. Freshness checks (`wiki-refresh`) only read metadata and content of documents the
-  wiki already cites. Admins should inventory every connector
+  wiki already cites. `wiki-expand` surveys a whole space; its search queries and page
+  fetches leave the machine like any connector use, and it excludes personal spaces and HR
+  pages by rule.
+- `python3 tools/wiki.py spend` reads Claude Code's own session logs under
+  `~/.claude/projects/` (read-only, local) to total token usage for budgets. It is the only
+  helper that reads outside the workspace. Admins should inventory every connector
   surface ([Managed MCP](https://code.claude.com/docs/en/managed-mcp)).
 
 ## 6. Human approval before anything leaves the machine

@@ -12,7 +12,8 @@ Request: $ARGUMENTS
 ## 1. Empty request: status
 Run `python3 tools/wiki.py status`. Reply in a few lines: open notes, notes waiting on the
 PM, sources due for a recheck, whether a wiki check is due, recent asks (and their next
-stage) and reports. Offer the one or two most useful next actions. End with: "Say
+stage) and reports, catalog coverage, and unfinished runs (`HANDOFF.md` under `work/`).
+Offer the one or two most useful next actions. End with: "Say
 `/wiki cheatsheet` for what you can ask."
 
 ## 2. `cheatsheet` (or `help`, `?`)
@@ -50,6 +51,7 @@ PM can redirect.
 | research, a comparison, a summary or a report to read later | `report` |
 | saving a document, notes or a fact | `wiki-ingest` |
 | their notes from the viewer | `wiki-notes` |
+| bringing in a whole area: an acquired company, another team's space, "continue the expand" | `wiki-expand` |
 | whether sources are current, syncing | `wiki-refresh` |
 | cleaning up or checking the wiki | `wiki-lint` |
 | setting up or upgrading the workspace | `setup` |

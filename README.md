@@ -36,6 +36,7 @@ be sure the toolkit handles it: `/wiki` alone shows what needs your attention, a
 | `marketing-check` | Fact-check marketing and sales copy against what the product does. |
 | `report` | Research a question and write a cited, dated report you can read later. |
 | `wiki-ingest` / `wiki-lint` | Grow and maintain the wiki. |
+| `wiki-expand` | Bring in a whole area (an acquired company, another team's space): survey, ingest the best pages within a budget, catalog the rest. |
 | `wiki-notes` | Process the notes you left on pages in the viewer. |
 | `wiki-refresh` | Check saved sources against their originals (read-only connector) and re-ingest changes. |
 | `setup` | Create or upgrade the workspace. |
@@ -50,6 +51,7 @@ wiki/lenses.md   coverage checklist (editable)      │    wiki/INDEX.md one lin
 wiki/review-log  lessons from real reviews  ────────┘
 wiki/reports/    research you asked for (dated snapshots)
 wiki/notes.jsonl your notes from the viewer, processed by wiki-notes
+wiki/catalog/    one line per page of surveyed spaces, read or not
 work/<ask>/      ask → intake → landscape → coverage → prd → critical review
 tools/           wiki.py (IDs, cards, lint, freshness, notes) and the viewer
 ```

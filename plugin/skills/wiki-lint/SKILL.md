@@ -37,6 +37,10 @@ them: the uncited check is a heuristic. Then do the judgment checks below by rea
     pages or answers seem to rely on.
 13. **People pages:** opinions or personal details that don't belong (see `wiki/README.md`).
 14. **Open notes:** count of open and `needs-info` notes; suggest `wiki-notes`.
+15. **Catalogs:** lines already carded but not ticked, ticks pointing at missing cards
+    (both mechanical), and catalogued pages that recent work folders listed as unread
+    leads more than once: suggest ingesting them.
+16. **Unfinished runs:** `HANDOFF.md` files in `work/`; remind the PM how to continue each.
 
 ## Report format
 Counts per check, then the top 10 fixes ranked by how much they would mislead a reader if

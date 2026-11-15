@@ -13,6 +13,8 @@ with the pm-toolkit skills. Follow these rules for every task.
 - `wiki/reports/`: ad-hoc research reports the PM asked for. Lighter rules; see
   `wiki/README.md`.
 - `wiki/notes.jsonl`: the PM's notes from the viewer, processed by `wiki-notes`.
+- `wiki/catalog/`: one line per page of spaces surveyed by `wiki-expand`, read or not.
+  `wiki/watch.md`: the spaces `wiki-refresh` watches for new pages.
 - `wiki/CHEATSHEET.md`: the PM's guide to using the workspace (`/wiki cheatsheet`).
 - `wiki/INDEX.md`: one line per page. Read it first; open only the pages you need.
 - `wiki/glossary.md`: internal names, acronyms, code names and their synonyms.
@@ -31,6 +33,10 @@ with the pm-toolkit skills. Follow these rules for every task.
   plus a question and a person to ask is a good answer. Before writing `(unknown)`, search
   `wiki/raw/` for the specific item (`python3 tools/wiki.py raw-hits <terms>` lists raw
   details no card or page mentions): cards and pages summarize, raw files hold the detail.
+  Then search the catalogs (`python3 tools/wiki.py catalog-search <terms>`). If a
+  catalogued page likely holds the answer, fetch it (read-only connector, or its `file:`
+  export), save it to `wiki/raw/`, card it, cite it, and tick its catalog line. If you can't
+  fetch it, name it in the answer as a lead with its link instead of a bare `(unknown)`.
 - No public mention of a capability is not evidence that it doesn't exist. Mark it unknown.
 - When sources conflict, show both with their dates and trust levels. Don't pick silently.
 - Prefer newer, authoritative sources (owner-written docs, specs, shipped release notes) over
@@ -70,4 +76,6 @@ with the pm-toolkit skills. Follow these rules for every task.
   `review-feedback` to log it. Offer this unprompted after meetings and reviews.
 - Cost: use the default model for reading, filing and mapping. For `coverage-review`,
   `critical-review` and final PRD passes, suggest the strongest available model.
+- Long or budgeted runs follow "Long runs and handoffs" in `wiki/README.md`: wind down at
+  about 80% of the budget, never stop mid-edit, and leave a `HANDOFF.md` for the next agent.
 - Report what you did, which sources you read, and what remains unknown.

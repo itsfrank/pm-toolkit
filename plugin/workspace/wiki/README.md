@@ -64,6 +64,50 @@ record `origin_version`, `last_checked` and `recheck_days`. A source is due when
 draft PRDs and tickets 7 days, specs and design docs 30, released docs 90, static files
 (PDF exports, transcripts) `never`.
 
+## Catalogs
+`catalog/<space>.md` lists every page of a space or collection `wiki-expand` surveyed, one
+line per page, so agents can find what the wiki hasn't read yet:
+```
+- [ ] [Billing architecture](https://…/pages/7104) · id: 7104 · path: WREN > Engineering · labels: billing · modified: 2026-09-02 · Summary of the page
+- [x] [Product overview](https://…/pages/7101) · id: 7101 · path: WREN > Home · modified: 2026-09-20 · card: S-0031
+```
+- `[ ]` not ingested, `[x]` ingested (`card:` names the card). `file:` points to a local
+  export when the page came from one.
+- A catalog line is a lead, not a source: never cite it. Fetch the page, save it to `raw/`,
+  card it, cite the card, then `python3 tools/wiki.py catalog-mark <id> S-NNNN`.
+- Top-ranked pages get a one-line summary; the long tail may have title, path and labels
+  only.
+- `watch.md` lists the spaces `wiki-refresh` checks for new or removed pages.
+
+## Long runs and handoffs
+Any long or budgeted run (expanding an area, a migration, a large batch ingest or report)
+works in its folder under `work/` and follows these rules:
+- **Budget:** in dollars (via `python3 tools/wiki.py spend --since <start>` and
+  `tools/prices.json`), tokens, or pages. Record the start time (UTC) and budget in the
+  run's `LOG.md`. At about 80% of the budget, start no new batches; let running ones finish.
+- **Wrap up gracefully** when the budget runs low, a limit is hit, or context runs short:
+  leave every file consistent (no half-filed page; finish or revert a cut-off batch),
+  update indexes, commit if the workspace uses git, then write the report with a
+  `## Not completed` section and `HANDOFF.md`. Going slightly over budget to finish the
+  wrap-up is fine; say by how much.
+- **`HANDOFF.md`** is for the next agent. Use these sections, all of them:
+  ```
+  # Handoff: <run>
+  Restart: "Continue work/<folder>/ with a budget of $N"   ← one line the PM can paste
+  ## Request
+  The original request, scope, budget and what was spent.
+  ## Done
+  Source IDs and page IDs or files processed, cards created, pages built, so none is redone.
+  ## Next steps
+  Numbered, in order, starting with the next item to process; flag items that matter most
+  (for example a page with a known conflict).
+  ## Decisions made
+  Choices already taken (exclusions, rankings, trust levels), so they aren't relitigated.
+  ## Open questions
+  ```
+- **Resume:** a skill that finds `HANDOFF.md` in its folder continues from it instead of
+  starting over, and appends to `LOG.md`.
+
 ## Notes
 The PM annotates rendered pages in the viewer (`python3 tools/viewer/serve.py`). Notes land
 in `notes.jsonl`, an append-only log; `wiki-notes` processes them. Never rewrite or delete

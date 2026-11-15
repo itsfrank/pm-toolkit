@@ -30,7 +30,12 @@ Output: `work/<slug>/landscape.md` (or `work/YYYY-MM-DD-landscape-<topic>/landsc
    "Limitations" section, a footnote or a draft proposal that nobody filed. Always read the
    raw file when its card says "not yet filed", is thin, or the grep hit is in a section the
    card doesn't summarize.
-5. Write `landscape.md` (template below). Every row cites a source or says `(unknown)`.
+5. **Unread pages:** if `wiki/catalog/` has catalogs, run
+   `python3 tools/wiki.py catalog-search <terms...>` with the whole term list. For the hits
+   that bear on the topic (up to about five), fetch each page (read-only connector, or its
+   `file:` export), save it to `wiki/raw/` with a card, use it, and tick its line with
+   `catalog-mark`. List the other relevant hits under `## Unread pages` with their links.
+6. Write `landscape.md` (template below). Every row cites a source or says `(unknown)`.
    Under `## Raw details not in the wiki`, account for every file `raw-hits` reported:
    the fact, where you used it above, or why it doesn't bear on the topic. Offer to file
    these with `wiki-ingest`.
@@ -63,11 +68,13 @@ Areas where the wiki has nothing. For each: who probably knows, what document mi
 Ranked list with the specific question for each person.
 ## Raw details not in the wiki
 One line per file `raw-hits` reported: the fact [S-NNNN], where it is used, or why not.
+## Unread pages
+Catalogued pages that likely matter but weren't read: title, link, why it may matter.
 ```
 
 ## Rules
 - Absence in the wiki means "unknown", never "doesn't exist". Before writing `(unknown)`,
-  run `raw-hits` (or grep `wiki/raw/`) for the specific item once more.
+  run `raw-hits` (or grep `wiki/raw/`) and `catalog-search` for the specific item once more.
 - Report draft proposals (pricing, packaging, scope) with their content and their status,
   e.g. "draft memo proposes X as a paid add-on (not approved) [S-NNNN]", not only "draft".
 - Show source trust when it matters: a capability backed only by `marketing` or `hearsay` is

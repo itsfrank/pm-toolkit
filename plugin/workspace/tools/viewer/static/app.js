@@ -312,6 +312,7 @@ async function loadStatus() {
   if (s.needs_info_notes) parts.push(s.needs_info_notes + " waiting on you");
   if (s.sources_due) parts.push(s.sources_due + " source" + (s.sources_due > 1 ? "s" : "") + " to recheck");
   if (s.lint_due) parts.push("wiki check due");
+  if ((s.unfinished_runs || []).length) parts.push(s.unfinished_runs.length + " unfinished run" + (s.unfinished_runs.length > 1 ? "s" : ""));
   $("status").textContent = parts.join(" · ");
   $("status").title = parts.length ? "Type /wiki in Claude to see and handle these" : "";
 }

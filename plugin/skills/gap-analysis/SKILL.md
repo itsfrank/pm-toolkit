@@ -15,7 +15,8 @@ Output: `work/YYYY-MM-DD-gaps-<topic>/gaps.md`.
    Split compound requirements ("A and B").
    Record each requirement's deadline or milestone dates, cited to the standard, regulation
    or customer document that sets them, and list them in a timeline in the summary.
-3. For each row, search product pages and source cards. Assign:
+3. For each row, search product pages and source cards, then the catalogs
+   (`python3 tools/wiki.py catalog-search`) for unread pages that may settle it. Assign:
    - `meets`: authoritative source shows it, in scope.
    - `partial`: some of it, or with conditions. Say what's missing.
    - `gap`: authoritative source shows it's not supported.

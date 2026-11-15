@@ -19,9 +19,14 @@ REQUIRED_WORKSPACE = [
     "AGENTS.md", "CLAUDE.md", "work/README.md",
     "wiki/README.md", "wiki/INDEX.md", "wiki/glossary.md", "wiki/lenses.md",
     "wiki/review-log.md", "wiki/sources/_TEMPLATE.md", "wiki/pages/_TEMPLATE.md",
-    "wiki/reports/INDEX.md", "wiki/pages/people", "wiki/CHEATSHEET.md", "tools/wiki.py", "tools/viewer/serve.py",
+    "wiki/reports/INDEX.md", "wiki/pages/people", "wiki/CHEATSHEET.md", "wiki/catalog/README.md", "wiki/watch.md",
+    "tools/prices.json", "tools/wiki.py", "tools/viewer/serve.py",
     "tools/viewer/README.md",
 ]
+SAMPLES = ROOT / "samples"
+# Convention files every sample workspace keeps identical to the template.
+SHARED = ["wiki/README.md", "wiki/sources/_TEMPLATE.md", "wiki/pages/_TEMPLATE.md",
+          "wiki/CHEATSHEET.md", "wiki/catalog/README.md"]
 EXTERNAL = re.compile(r"""(?:src|href)\s*=\s*["']\s*(?:https?:)?//|@import\s+url\(\s*["']?(?:https?:)?//"""
                       r"""|\bimport\b[^;\n]*["'](?:https?:)?//|fetch\(\s*["'](?:https?:)?//""", re.I)
 LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
@@ -96,6 +101,14 @@ def check_code():
             errors.append(f"{path.relative_to(ROOT)}: loads an external URL")
 
 
+def check_samples():
+    for sample in sorted(p for p in SAMPLES.iterdir() if (p / "wiki").is_dir()):
+        for rel in SHARED:
+            mine, theirs = sample / rel, WORKSPACE / rel
+            if not mine.exists() or mine.read_bytes() != theirs.read_bytes():
+                errors.append(f"{mine.relative_to(ROOT)}: differs from plugin/workspace/{rel}; copy it over")
+
+
 def check_links(files):
     for path in files:
         if path.suffix != ".md" or not path.is_file() or path.name == "_TEMPLATE.md":
@@ -116,6 +129,7 @@ def main():
     check_json(files)
     check_workspace()
     check_code()
+    check_samples()
     check_links(files)
     for e in errors:
         print(e)

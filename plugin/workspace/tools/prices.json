@@ -1,0 +1,8 @@
+{
+  "_note": "USD per million tokens, by model-name prefix. Fill in from your provider's current price list; tools/wiki.py spend leaves any model with a missing price unpriced and budgets in tokens instead.",
+  "models": {
+    "claude-opus": {"input": null, "output": null, "cache_write": null, "cache_read": null},
+    "claude-sonnet": {"input": null, "output": null, "cache_write": null, "cache_read": null},
+    "claude-haiku": {"input": null, "output": null, "cache_write": null, "cache_read": null}
+  }
+}

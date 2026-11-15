@@ -1,5 +1,5 @@
 ---
-type: product | team | initiative | customer | competitor | topic | decision | answer
+type: product | team | person | initiative | customer | competitor | topic | decision | answer
 status: draft
 updated: YYYY-MM-DD
 aliases: []         # other names, code names, acronyms

@@ -7,6 +7,9 @@ Standard library only (Python 3.8+). Run from the workspace root or pass --root.
   python3 tools/wiki.py cards-from-raw [--dry-run] [FILE ...]
   python3 tools/wiki.py due [--today YYYY-MM-DD]
   python3 tools/wiki.py raw-hits TERM [TERM ...] [--all]
+  python3 tools/wiki.py catalog-search TERM [TERM ...] [--all] [--limit N]
+  python3 tools/wiki.py catalog-mark ID_OR_URL S-NNNN
+  python3 tools/wiki.py spend [--since ISO_TIME] [--marker TEXT] [--session FILE] [--json]
   python3 tools/wiki.py notes [--all] [--json]
   python3 tools/wiki.py note-status ID STATUS --resolution TEXT [--by NAME]
   python3 tools/wiki.py lint [--json] [--today YYYY-MM-DD]
@@ -15,7 +18,8 @@ Standard library only (Python 3.8+). Run from the workspace root or pass --root.
 Dates default to today; set PM_TODAY=YYYY-MM-DD to pin them (the sample and evals do).
 
 Read-only except: cards-from-raw writes new cards, note-status appends to notes.jsonl,
-reports-index rewrites wiki/reports/INDEX.md.
+reports-index rewrites wiki/reports/INDEX.md, catalog-mark edits one catalog line.
+spend reads Claude Code's own session logs under ~/.claude/projects/ (read-only).
 """
 import argparse
 import datetime
@@ -32,6 +36,8 @@ LABELS = ("(inferred)", "(assumption)", "(unknown)")
 LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
 URL = re.compile(r"https?://[^\s)>\]]+")
 STATUSES = ("open", "applied", "rejected", "needs-info")
+# Catalog line: - [ ] [Title](url) · id: 123 · path: A > B · labels: x, y · modified: 2026-01-02 · file: exports/a.md · Summary
+CATALOG_LINE = re.compile(r"^- \[( |x)\] \[(.+?)\]\((\S+?)\)(.*)$")
 # Page sections whose bullets need no citation.
 UNCITED_OK = ("related", "open questions")
 
@@ -195,6 +201,158 @@ def cmd_due(wiki, args):
     for sid, f, why in rows:
         print(f"{sid}  {f.get('title', '')}  [{why}]  {f.get('origin_url') or f.get('origin_id')}")
     print(f"{len(rows)} source(s) due for a recheck")
+
+
+def aliases(wiki, terms):
+    """Expand terms with glossary synonyms (Term and 'Also called' columns)."""
+    out = {t.lower() for t in terms}
+    path = wiki.wiki / "glossary.md"
+    if not path.exists():
+        return sorted(out)
+    for line in read(path).splitlines():
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) < 3 or cells[0] in ("Term", "") or set(cells[0]) <= set("-: "):
+            continue
+        names = {cells[0].lower()} | {a.strip().lower() for a in cells[2].split(",") if a.strip()}
+        if names & out:
+            out |= names
+    return sorted(out)
+
+
+def catalog_entries(wiki):
+    """Every line of every wiki/catalog/*.md, parsed into fields."""
+    out = []
+    for path in sorted((wiki.wiki / "catalog").glob("*.md")):
+        if path.name == "README.md":
+            continue
+        for n, line in enumerate(read(path).splitlines(), 1):
+            m = CATALOG_LINE.match(line.strip())
+            if not m:
+                continue
+            fields, summary = {}, []
+            for part in (x.strip() for x in m.group(4).split(" · ") if x.strip()):
+                kv = re.match(r"^(id|path|labels|modified|file|space|card):\s*(.*)$", part)
+                if kv:
+                    fields[kv.group(1)] = kv.group(2)
+                else:
+                    summary.append(part.lstrip("→ ").strip())
+            card = re.search(r"S-\d{4}", fields.pop("card", ""))
+            out.append(dict(fields, catalog=wiki.rel(path), line=n, done=m.group(1) == "x",
+                            title=m.group(2), url=m.group(3), summary=" ".join(summary),
+                            card=card.group(0) if card else None))
+    return out
+
+
+def catalog_search(wiki, terms, show_all=False):
+    terms = aliases(wiki, terms)
+    rows = []
+    for e in catalog_entries(wiki):
+        if e["done"] and not show_all:
+            continue
+        hay = {"title": e["title"].lower(), "path": e.get("path", "").lower(),
+               "labels": e.get("labels", "").lower(), "summary": e["summary"].lower()}
+        weight = {"title": 3, "labels": 2, "path": 1, "summary": 1}
+        score = sum(w for t in terms for k, w in weight.items() if t in hay[k])
+        if score:
+            rows.append((score, e))
+    rows.sort(key=lambda r: (-r[0], r[1].get("modified", "")), reverse=False)
+    return terms, rows
+
+
+def cmd_catalog_search(wiki, args):
+    terms, rows = catalog_search(wiki, args.terms, args.all)
+    print(f"terms: {', '.join(terms)}")
+    for score, e in rows[:args.limit]:
+        where = e.get("file") or e["url"]
+        state = f"ingested as {e['card']}" if e["done"] else "not ingested"
+        print(f"[{score}] {e['title']}  ({state}; modified {e.get('modified', '?')})\n"
+              f"    {e.get('path', '')}\n    {where}" + (f"\n    {e['summary'][:160]}" if e["summary"] else ""))
+    print(f"{len(rows)} catalog page(s) match" + ("" if args.all else " (not yet ingested; --all for every page)"))
+
+
+def cmd_catalog_mark(wiki, args):
+    """Tick the catalog line for a page and point it at its new card."""
+    key = args.page.strip()
+    hits = [e for e in catalog_entries(wiki) if key in (e.get("id"), e["url"], e.get("file"))]
+    if not hits:
+        sys.exit(f"no catalog line with id, url or file {key}")
+    for e in hits:
+        path = wiki.root / e["catalog"]
+        lines = read(path).splitlines()
+        line = lines[e["line"] - 1].replace("- [ ]", "- [x]", 1)
+        if args.card not in line:
+            line += f" · card: {args.card}"
+        lines[e["line"] - 1] = line
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        print(f"{e['catalog']}:{e['line']}  {e['title']} -> {args.card}")
+
+
+def session_logs(root, session=None, marker=None):
+    """Claude Code's log for the current session in this workspace, plus its subagents' logs."""
+    if session:
+        main = pathlib.Path(session)
+    else:
+        base = pathlib.Path(os.environ.get("CLAUDE_CONFIG_DIR", pathlib.Path.home() / ".claude"))
+        folder = base / "projects" / re.sub(r"[^A-Za-z0-9]", "-", str(root))
+        logs = sorted(folder.glob("*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True)
+        if marker:  # several sessions can share a workspace; pick the one that saw the marker
+            logs = [p for p in logs if marker in read(p)]
+        if not logs:
+            sys.exit(f"no Claude Code session log found in {folder}" + (" containing the marker" if marker else ""))
+        main = logs[0]
+    return [main] + sorted((main.parent / main.stem / "subagents").glob("*.jsonl"))
+
+
+def spend(root, prices_path, since=None, session=None, marker=None):
+    """Tokens per model since a time, counting each message once, priced from prices.json."""
+    usage = {}  # message id -> (model, usage); log lines repeat per content block
+    files = session_logs(root, session, marker)
+    for path in files:
+        for line in read(path).splitlines():
+            try:
+                e = json.loads(line)
+            except ValueError:
+                continue
+            m = e.get("message")
+            if not isinstance(m, dict) or not m.get("usage") or (since and e.get("timestamp", "") < since):
+                continue
+            usage[m.get("id") or e.get("uuid")] = (m.get("model", "unknown"), m["usage"])
+    keys = ("input_tokens", "output_tokens", "cache_creation_input_tokens", "cache_read_input_tokens")
+    price_keys = dict(zip(keys, ("input", "output", "cache_write", "cache_read")))
+    prices = {}
+    if prices_path.exists():
+        prices = json.loads(read(prices_path)).get("models", {})
+    models = {}
+    for model, u in usage.values():
+        row = models.setdefault(model, dict.fromkeys(keys, 0))
+        for k in keys:
+            row[k] += u.get(k) or 0
+    total, priced = 0.0, True
+    for model, row in models.items():
+        rate = next((v for k, v in prices.items() if model.startswith(k)), None)
+        if rate and all(isinstance(rate.get(price_keys[k]), (int, float)) for k in keys):
+            row["usd"] = round(sum(row[k] * rate[price_keys[k]] for k in keys) / 1e6, 4)
+            total += row["usd"]
+        else:
+            priced = False
+    return {"session": str(files[0]), "subagent_logs": len(files) - 1, "since": since,
+            "messages": len(usage), "models": models,
+            "usd": round(total, 2) if priced and models else None,
+            "note": None if priced else "no complete price for some models in tools/prices.json; budget in tokens"}
+
+
+def cmd_spend(wiki, args):
+    s = spend(wiki.root, wiki.root / "tools" / "prices.json", args.since, args.session, args.marker)
+    if args.json:
+        print(json.dumps(s, indent=2))
+        return
+    print(f"session log: {s['session']} (+{s['subagent_logs']} subagent logs), {s['messages']} messages"
+          + (f" since {s['since']}" if s["since"] else ""))
+    for model, row in s["models"].items():
+        tokens = ", ".join(f"{k.replace('_input_tokens', '').replace('_tokens', '')} {v:,}"
+                           for k, v in row.items() if k != "usd")
+        print(f"  {model}: {tokens}" + (f"  = ${row['usd']:.2f}" if "usd" in row else ""))
+    print(f"total: ${s['usd']:.2f}" if s["usd"] is not None else f"total: unpriced ({s['note']})")
 
 
 def raw_hits(wiki, terms, show_all=False, per_file=8):
@@ -392,6 +550,12 @@ def lint(wiki, today):
         if when and (today - when).days > 60:
             add("old reports (snapshots; re-run if still used)", f"{wiki.rel(path)}: {when}")
 
+    origins = {str(f.get("origin_id", "")) for _, f, _ in cards.values() if f.get("origin_id")}
+    for e in catalog_entries(wiki) if (wiki.wiki / "catalog").is_dir() else []:
+        if not e["done"] and e.get("id") and e["id"] in origins:
+            add("catalog lines already carded but not ticked", f"{e['catalog']}:{e['line']}: {e['title']}")
+        if e["done"] and e["card"] and e["card"] not in cards:
+            add("catalog lines pointing at a missing card", f"{e['catalog']}:{e['line']}: {e['card']}")
     for sid, f, why in due(wiki, today):
         add("sources due for recheck", f"{sid}: {why}")
     for note in wiki.notes().values():
@@ -433,7 +597,10 @@ def status(wiki, today):
         fields, body = frontmatter(read(path))
         title = fields.get("title") or next((l[2:].strip() for l in body.splitlines() if l.startswith("# ")), path.stem)
         reports.append({"path": wiki.rel(path), "title": title})
+    catalog = catalog_entries(wiki) if (wiki.wiki / "catalog").is_dir() else []
     return {"open_notes": len([n for n in notes if n["status"] == "open"]),
+            "catalog_pages": len(catalog), "catalog_ingested": len([e for e in catalog if e["done"]]),
+            "unfinished_runs": sorted(wiki.rel(h.parent) for h in work.glob("*/HANDOFF.md")) if work.is_dir() else [],
             "needs_info_notes": len([n for n in notes if n["status"] == "needs-info"]),
             "sources_due": len(due(wiki, today)),
             "last_lint": last_lint.isoformat() if last_lint else None,
@@ -453,6 +620,10 @@ def cmd_status(wiki, args):
         print(f"Ask: {a['folder']} [{', '.join(a['stages']) or 'not started'}]")
     for r in s["recent_reports"]:
         print(f"Report: {r['title']} ({r['path']})")
+    if s["catalog_pages"]:
+        print(f"Catalogs: {s['catalog_ingested']} of {s['catalog_pages']} pages ingested")
+    for folder in s["unfinished_runs"]:
+        print(f"Unfinished run: {folder} (see HANDOFF.md)")
 
 
 def cmd_reports_index(wiki, args):
@@ -492,6 +663,21 @@ def main():
     p.add_argument("terms", nargs="+")
     p.add_argument("--all", action="store_true", help="also show lines whose terms are summarized")
     p.set_defaults(fn=cmd_raw_hits)
+    p = sub.add_parser("catalog-search", help="find catalogued (not yet ingested) pages by terms and aliases")
+    p.add_argument("terms", nargs="+")
+    p.add_argument("--all", action="store_true", help="include pages already ingested")
+    p.add_argument("--limit", type=int, default=15)
+    p.set_defaults(fn=cmd_catalog_search)
+    p = sub.add_parser("catalog-mark", help="tick a catalog line once its page is ingested")
+    p.add_argument("page", help="page id, url or export file from the catalog line")
+    p.add_argument("card", help="the new source card, S-NNNN")
+    p.set_defaults(fn=cmd_catalog_mark)
+    p = sub.add_parser("spend", help="tokens and cost of this Claude Code session (reads its own logs)")
+    p.add_argument("--since", help="ISO time; count only messages after it (the run's start)")
+    p.add_argument("--marker", help="pick the session whose log contains this text")
+    p.add_argument("--session", help="path to a session .jsonl log")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(fn=cmd_spend)
     p = sub.add_parser("notes", help="list notes and where their quotes are now")
     p.add_argument("--all", action="store_true", help="include closed notes")
     p.add_argument("--json", action="store_true")

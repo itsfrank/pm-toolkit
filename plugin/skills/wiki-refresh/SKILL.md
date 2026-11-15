@@ -31,8 +31,11 @@ and ask the PM to re-export the ones that matter.
    an answer, say whether the answer still holds.
 
 ## Discovery (optional, when asked to sync)
-Search the connector for new documents in the spaces or projects the wiki already draws
-from (look at `origin_url` values), list the ones with no card, and offer to ingest them.
+Search the connector for new documents in the spaces listed in `wiki/watch.md` and the ones
+the wiki already draws from (look at `origin_url` values). Add new pages to the space's
+catalog as `[ ]` lines, mark pages that are gone with `(removed YYYY-MM-DD)` (never delete
+lines), list the new ones with no card, and offer to ingest them. Large changes (a newly
+merged space) are a job for `wiki-expand`.
 
 ## Rules
 - Connectors are read-only for us. Never write, comment or change anything through them.

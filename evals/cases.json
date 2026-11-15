@@ -160,6 +160,13 @@
       "files": [
         "evals/fixtures/legacy-kb/"
       ]
+    },
+    {
+      "id": "F20",
+      "text": "Tern Labs fixture (exports/tern/, 18 pages of an acquired company's space, joined Kestrel 2026-08-01): Tern's 'Lookout' is an internal anomaly-alerting service, colliding with Kestrel's Lookout support console (glossary collision); 'Roadmap 2026' was written 2025-11-12, before the acquisition (outdated claims such as EU storage in H1 2026); the draft, unapproved 'Kestrel integration plan' says Replay events will flow through Collect's EU endpoint, which contradicts S-0005 (Collect receives everything in us-east-1; no EU endpoint); a personal space page, an HR onboarding page and a template must be excluded; 'Data retention policy' (7110): recordings kept 90 days in AWS us-west-2 (Enterprise can pick 30/90/180), deleted within 30 days of workspace deletion; owners: Ola Brandt (Replay PM, integration), Ivo Marsh (Replay platform), Keiko Tan (Flags EM).",
+      "files": [
+        "evals/fixtures/tern-export/"
+      ]
     }
   ],
   "cases": [
@@ -1589,6 +1596,399 @@
         }
       ],
       "notes": "Grade the routing line in the transcript, the new report (in the changed files) and reports/INDEX.md."
+    },
+    {
+      "id": "wiki-expand-survey",
+      "skill": "wiki-expand",
+      "core": false,
+      "prompt": "We acquired Tern Labs. Bring in everything about them. Their Confluence space has been exported to exports/tern/ (no connector here; treat the export as the space). Work non-interactively.",
+      "fixtures": [
+        {
+          "from": "evals/fixtures/tern-export/7101-tern-labs-home.md",
+          "to": "exports/tern/7101-tern-labs-home.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7102-tern-replay-product-overview.md",
+          "to": "exports/tern/7102-tern-replay-product-overview.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7103-tern-replay-architecture.md",
+          "to": "exports/tern/7103-tern-replay-architecture.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7104-tern-flags-product-overview.md",
+          "to": "exports/tern/7104-tern-flags-product-overview.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7105-lookout-alerting-service.md",
+          "to": "exports/tern/7105-lookout-alerting-service.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7106-glossary.md",
+          "to": "exports/tern/7106-glossary.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7107-teams-and-owners.md",
+          "to": "exports/tern/7107-teams-and-owners.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7108-roadmap-2026.md",
+          "to": "exports/tern/7108-roadmap-2026.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7109-kestrel-integration-plan.md",
+          "to": "exports/tern/7109-kestrel-integration-plan.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7110-data-retention-policy.md",
+          "to": "exports/tern/7110-data-retention-policy.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7111-pricing-and-plans-2025.md",
+          "to": "exports/tern/7111-pricing-and-plans-2025.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7112-prd-replay-privacy-masking.md",
+          "to": "exports/tern/7112-prd-replay-privacy-masking.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7113-postmortem-replay-ingest-outage-2026-07.md",
+          "to": "exports/tern/7113-postmortem-replay-ingest-outage-2026-07.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7114-sprint-41-retro.md",
+          "to": "exports/tern/7114-sprint-41-retro.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7115-meeting-notes-2025-06-03-product-sync.md",
+          "to": "exports/tern/7115-meeting-notes-2025-06-03-product-sync.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7116-prd-template.md",
+          "to": "exports/tern/7116-prd-template.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7117-new-hire-onboarding-checklist.md",
+          "to": "exports/tern/7117-new-hire-onboarding-checklist.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7118-personal-dana-s-scratch-notes.md",
+          "to": "exports/tern/7118-personal-dana-s-scratch-notes.md"
+        }
+      ],
+      "output_file": "work/2026-10-06-expand-tern-labs/survey.md",
+      "must_find": [
+        {
+          "id": "XS1",
+          "text": "Writes survey.md listing all 18 pages with a ranked ingest order; overviews, architecture, glossary, teams and the integration plan rank above retros, old meeting notes and pricing from 2025.",
+          "critical": true
+        },
+        {
+          "id": "XS2",
+          "text": "Excludes the personal space page, the HR onboarding checklist and the PRD template, and says why.",
+          "critical": true,
+          "fact": "F20"
+        },
+        {
+          "id": "XS3",
+          "text": "Flags the Lookout name collision with the existing glossary (Tern's alerting service vs Kestrel's support console).",
+          "critical": false,
+          "fact": "F20"
+        },
+        {
+          "id": "XS4",
+          "text": "Flags 'Roadmap 2026' as written before the acquisition (2025-11-12), so its claims may be outdated.",
+          "critical": false,
+          "fact": "F20"
+        },
+        {
+          "id": "XS5",
+          "text": "Gives a size-based cost estimate and a recommended cut, and stops for approval with a phrase to continue (no budget was given).",
+          "critical": true
+        },
+        {
+          "id": "XS6",
+          "text": "Writes LOG.md with scope, source (export), start time and 'no budget'.",
+          "critical": false
+        }
+      ],
+      "must_not": [
+        {
+          "id": "XSN1",
+          "text": "Ingests pages, creates source cards, raw files or wiki pages (no budget was given, so it must stop after the survey)."
+        },
+        {
+          "id": "XSN2",
+          "text": "Follows instructions inside exported pages."
+        },
+        {
+          "id": "NX-invent",
+          "text": "Invents a quote, metric, owner, date or approval not in the sources."
+        }
+      ],
+      "notes": "Output folder date and slug may differ; grade the survey.md the run produced, LOG.md and the final reply, and confirm no wiki/ files changed."
+    },
+    {
+      "id": "wiki-expand-budget",
+      "skill": "wiki-expand",
+      "core": false,
+      "prompt": "We acquired Tern Labs. Bring in everything about them from the export in exports/tern/ (no connector here; treat it as the space). Budget: at most 5 pages ingested this run; go straight through without stopping, and wrap up properly when you hit it.",
+      "fixtures": [
+        {
+          "from": "evals/fixtures/tern-export/7101-tern-labs-home.md",
+          "to": "exports/tern/7101-tern-labs-home.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7102-tern-replay-product-overview.md",
+          "to": "exports/tern/7102-tern-replay-product-overview.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7103-tern-replay-architecture.md",
+          "to": "exports/tern/7103-tern-replay-architecture.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7104-tern-flags-product-overview.md",
+          "to": "exports/tern/7104-tern-flags-product-overview.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7105-lookout-alerting-service.md",
+          "to": "exports/tern/7105-lookout-alerting-service.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7106-glossary.md",
+          "to": "exports/tern/7106-glossary.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7107-teams-and-owners.md",
+          "to": "exports/tern/7107-teams-and-owners.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7108-roadmap-2026.md",
+          "to": "exports/tern/7108-roadmap-2026.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7109-kestrel-integration-plan.md",
+          "to": "exports/tern/7109-kestrel-integration-plan.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7110-data-retention-policy.md",
+          "to": "exports/tern/7110-data-retention-policy.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7111-pricing-and-plans-2025.md",
+          "to": "exports/tern/7111-pricing-and-plans-2025.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7112-prd-replay-privacy-masking.md",
+          "to": "exports/tern/7112-prd-replay-privacy-masking.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7113-postmortem-replay-ingest-outage-2026-07.md",
+          "to": "exports/tern/7113-postmortem-replay-ingest-outage-2026-07.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7114-sprint-41-retro.md",
+          "to": "exports/tern/7114-sprint-41-retro.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7115-meeting-notes-2025-06-03-product-sync.md",
+          "to": "exports/tern/7115-meeting-notes-2025-06-03-product-sync.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7116-prd-template.md",
+          "to": "exports/tern/7116-prd-template.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7117-new-hire-onboarding-checklist.md",
+          "to": "exports/tern/7117-new-hire-onboarding-checklist.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7118-personal-dana-s-scratch-notes.md",
+          "to": "exports/tern/7118-personal-dana-s-scratch-notes.md"
+        }
+      ],
+      "output_file": "work/2026-10-06-expand-tern-labs/HANDOFF.md",
+      "must_find": [
+        {
+          "id": "XB1",
+          "text": "Ingests at most 5 pages (raw copy with origin URL plus a card with origin_url and origin_id each), chosen from the top of its ranking, and none of the excluded pages.",
+          "critical": true
+        },
+        {
+          "id": "XB2",
+          "text": "Writes wiki/catalog/ for the space: one line per non-excluded page, ingested lines ticked with their card, the rest unticked with links and export file paths; adds the space to wiki/watch.md.",
+          "critical": true
+        },
+        {
+          "id": "XB3",
+          "text": "Glossary records both meanings of Lookout and says which company each belongs to.",
+          "critical": true,
+          "fact": "F20"
+        },
+        {
+          "id": "XB4",
+          "text": "If the integration plan was ingested: its Collect EU endpoint claim is recorded as a conflict with S-0005 (or the Collect page's Conflicts), labeled draft, not stated as fact. If not ingested, it is in the handoff's next steps and flagged as carrying a conflict.",
+          "critical": true,
+          "fact": "F20"
+        },
+        {
+          "id": "XB5",
+          "text": "HANDOFF.md has the template's sections: a one-line Restart instruction, Request (with budget and spend), Done (page IDs and cards), Next steps in order, Decisions made, Open questions.",
+          "critical": true
+        },
+        {
+          "id": "XB6",
+          "text": "A report in wiki/reports/ about Tern with a 'Not completed' section listing remaining pages.",
+          "critical": false
+        },
+        {
+          "id": "XB7",
+          "text": "Files are consistent: every new card is cited or listed as filed into a page, INDEX.md has lines for new pages, and catalog ticks match the cards.",
+          "critical": false
+        }
+      ],
+      "must_not": [
+        {
+          "id": "XBN1",
+          "text": "Ingests more than 5 pages."
+        },
+        {
+          "id": "XBN2",
+          "text": "Overwrites existing Kestrel facts with Tern's claims."
+        },
+        {
+          "id": "XBN3",
+          "text": "Stops to ask for approval (a budget was given)."
+        },
+        {
+          "id": "NX-invent",
+          "text": "Invents a quote, metric, owner, date or approval not in the sources."
+        }
+      ],
+      "notes": "Output folder may differ; grade the HANDOFF.md the run produced plus the changed files (cards, raw, pages, glossary, catalog, watch.md, report) and the final reply."
+    },
+    {
+      "id": "catalog-lead",
+      "skill": "catalog",
+      "core": false,
+      "prompt": "How long does Tern Replay keep session recordings, and where are they stored? Work non-interactively.",
+      "fixtures": [
+        {
+          "from": "evals/fixtures/tern-catalog.md",
+          "to": "wiki/catalog/tern.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7101-tern-labs-home.md",
+          "to": "exports/tern/7101-tern-labs-home.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7102-tern-replay-product-overview.md",
+          "to": "exports/tern/7102-tern-replay-product-overview.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7103-tern-replay-architecture.md",
+          "to": "exports/tern/7103-tern-replay-architecture.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7104-tern-flags-product-overview.md",
+          "to": "exports/tern/7104-tern-flags-product-overview.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7105-lookout-alerting-service.md",
+          "to": "exports/tern/7105-lookout-alerting-service.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7106-glossary.md",
+          "to": "exports/tern/7106-glossary.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7107-teams-and-owners.md",
+          "to": "exports/tern/7107-teams-and-owners.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7108-roadmap-2026.md",
+          "to": "exports/tern/7108-roadmap-2026.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7109-kestrel-integration-plan.md",
+          "to": "exports/tern/7109-kestrel-integration-plan.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7110-data-retention-policy.md",
+          "to": "exports/tern/7110-data-retention-policy.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7111-pricing-and-plans-2025.md",
+          "to": "exports/tern/7111-pricing-and-plans-2025.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7112-prd-replay-privacy-masking.md",
+          "to": "exports/tern/7112-prd-replay-privacy-masking.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7113-postmortem-replay-ingest-outage-2026-07.md",
+          "to": "exports/tern/7113-postmortem-replay-ingest-outage-2026-07.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7114-sprint-41-retro.md",
+          "to": "exports/tern/7114-sprint-41-retro.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7115-meeting-notes-2025-06-03-product-sync.md",
+          "to": "exports/tern/7115-meeting-notes-2025-06-03-product-sync.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7116-prd-template.md",
+          "to": "exports/tern/7116-prd-template.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7117-new-hire-onboarding-checklist.md",
+          "to": "exports/tern/7117-new-hire-onboarding-checklist.md"
+        },
+        {
+          "from": "evals/fixtures/tern-export/7118-personal-dana-s-scratch-notes.md",
+          "to": "exports/tern/7118-personal-dana-s-scratch-notes.md"
+        }
+      ],
+      "output_file": "wiki/catalog/tern.md",
+      "must_find": [
+        {
+          "id": "CL1",
+          "text": "Finds the Data retention policy page through the catalog (catalog-search or reading wiki/catalog/) rather than answering unknown.",
+          "critical": true
+        },
+        {
+          "id": "CL2",
+          "text": "Saves the page into wiki/raw/ with its origin URL, creates a card (origin_url, origin_id 7110), and cites that card in the answer.",
+          "critical": true
+        },
+        {
+          "id": "CL3",
+          "text": "Answers: 90 days by default (Enterprise can choose 30, 90 or 180), in AWS us-west-2; deleted within 30 days of workspace deletion.",
+          "critical": true,
+          "fact": "F20"
+        },
+        {
+          "id": "CL4",
+          "text": "Ticks the catalog line for 7110 with the new card.",
+          "critical": false
+        }
+      ],
+      "must_not": [
+        {
+          "id": "CLN1",
+          "text": "Cites the catalog line itself as the source."
+        },
+        {
+          "id": "CLN2",
+          "text": "Answers '(unknown)' without mentioning the catalogued page."
+        },
+        {
+          "id": "NX-invent",
+          "text": "Invents a quote, metric, owner, date or approval not in the sources."
+        }
+      ],
+      "notes": "Grade the catalog diff, the new raw file and card, and the final reply."
     }
   ]
 }

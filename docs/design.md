@@ -96,6 +96,29 @@ without blocking the answer. Writing changes back into the wiki goes through nor
 the default model, because a new version can contradict pages, reports and approved answers,
 and that needs judgment.
 
+## Expanding into a new area
+When a company acquires another, or two teams' spaces merge, thousands of pages arrive at
+once. Ingesting all of them would cost a lot and bury the useful ones under meeting notes.
+`wiki-expand` surveys everything in scope cheaply, ingests the highest-value pages within a
+budget, and catalogs the rest: one searchable line per page with its link. The catalog is
+what makes selective ingest safe. Before an agent writes "unknown", it searches the catalogs
+and fetches the page that probably holds the answer, so the long tail is one step away
+rather than invisible. Catalog lines are never cited; only the fetched, carded page is.
+
+Surveys stop for the PM's approval unless a budget was given up front. Budgets can be in
+dollars because Claude Code logs exact token usage per message; `tools/wiki.py spend`
+reads the session's own log (counting each message once, from the run's start time) and
+prices it from `tools/prices.json`, which the PM fills in. Prices are not written into
+skills because they change.
+
+## Graceful wind-down
+A run that stops at its budget mid-edit leaves half-filed pages and no trail. Long runs
+instead stop starting new work at about 80% of the budget, finish what's in flight, leave
+every file consistent, and write a `HANDOFF.md` for the next agent: what's done, what's
+next, decisions already made. Running slightly over to finish cleanly is better than
+leaving the wiki inconsistent. The same applies when a run hits a usage limit or runs out of
+context, so the rule lives in the shared conventions, not in one skill.
+
 ## Migration
 Many PMs start with an ad-hoc wiki before they find a toolkit. Re-ingesting from scratch
 throws away the pages they value. `MIGRATION.md` classifies files by role rather than

@@ -19,7 +19,10 @@ the result as a report if the PM wants to read it later.
 3. Gather evidence: `wiki/INDEX.md` and the matching pages, the source cards behind them, and
    the raw files for decisive detail. If read-only connectors are available and the question
    is about current state (in-flight work, owners, status), search them too, and save
-   anything you rely on into `wiki/raw/` with a card (`wiki-ingest` rules).
+   anything you rely on into `wiki/raw/` with a card (`wiki-ingest` rules). Search the
+   catalogs too (`python3 tools/wiki.py catalog-search <terms>`): fetch and card the unread
+   pages that answer the question, tick their lines with `catalog-mark`, and list the rest
+   in the report's unknowns as links.
 4. Write the report. Cite every fact `[S-NNNN]` or label it. Separate what sources say from
    your analysis. Show conflicts with dates and trust levels.
 5. Rebuild the index and reply with a five-line summary and the report path.

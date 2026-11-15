@@ -14,7 +14,9 @@ Output: `work/<slug>/intake.md` and `work/<slug>/questions.md`.
    `wiki/reports/INDEX.md` on related topics (overlap scans especially). If read-only
    connectors are available, run a few searches for the ask's key terms to spot related
    work in flight; cite what you rely on after saving it (`wiki-ingest`), otherwise list it
-   as leads to check.
+   as leads to check. If
+   `wiki/catalog/` has catalogs, run `python3 tools/wiki.py catalog-search` on the key terms
+   and list relevant unread pages as leads with their links.
 2. Write `intake.md` with the sections below. Keep it to two pages or less.
 3. Write or extend `questions.md` grouped by who should answer, with a priority
    (**blocking** / important / nice), and an empty answer field.
