@@ -37,6 +37,14 @@ with the pm-toolkit skills. Follow these rules for every task.
   catalogued page likely holds the answer, fetch it (read-only connector, or its `file:`
   export), save it to `wiki/raw/`, card it, cite it, and tick its catalog line. If you can't
   fetch it, name it in the answer as a lead with its link instead of a bare `(unknown)`.
+- Quotation marks only around words copied exactly from a cited source. Otherwise paraphrase
+  without quotes.
+- Keep the source's modality, numbers and scope: "intended to" is not "did", "discussed"
+  is not "promised", "no commitment" stays no commitment, a per-tenant limit stays per tenant.
+- Carry the source's qualifiers with the fact: "for testing only", preview or beta, off by
+  default, version or region limits. Check the raw file for them when the card is terse.
+- "Not found" says where you looked. A page you found but couldn't read (access denied,
+  error) is a lead, not an absence: give its title, link and likely owner, status unknown.
 - No public mention of a capability is not evidence that it doesn't exist. Mark it unknown.
 - When sources conflict, show both with their dates and trust levels. Don't pick silently.
 - Prefer newer, authoritative sources (owner-written docs, specs, shipped release notes) over

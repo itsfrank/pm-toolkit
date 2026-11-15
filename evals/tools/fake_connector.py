@@ -61,7 +61,9 @@ class Store:
                 self.pages[str(meta["id"])] = (meta, body)
 
     def search(self, query, limit=10):
-        terms = [t for t in re.findall(r"[a-z0-9][a-z0-9\-]*", query.lower()) if len(t) > 1]
+        # strip a plural "s" so "subprocessors" finds "Subprocessor list", as real search stemming would
+        terms = [t[:-1] if len(t) > 3 and t.endswith("s") and not t.endswith("ss") else t
+                 for t in re.findall(r"[a-z0-9][a-z0-9\-]*", query.lower()) if len(t) > 1]
         hits = []
         for pid, (meta, body) in self.pages.items():
             title, low = meta.get("title", "").lower(), body.lower()
