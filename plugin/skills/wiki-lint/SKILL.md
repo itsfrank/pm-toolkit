@@ -13,7 +13,8 @@ Start with `python3 tools/wiki.py lint` (add `--json` for every item). It covers
 mechanical checks: uncited candidates, dangling citations, broken links, index drift,
 orphans, unused sources, raw files without cards, card fields to fill, stale pages, old
 reports, sources due for a recheck and open notes. Read the flagged items before reporting
-them: the uncited check is a heuristic. Then do the judgment checks below by reading.
+them: the uncited check is a heuristic. Index drift can be fixed with `lint --fix-index`. Then
+do the judgment checks below by reading.
 
 ## Checks
 1. **Uncited facts:** lines in `pages/` stating facts without `[S-NNNN]` or a label.

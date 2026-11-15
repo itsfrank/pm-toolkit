@@ -44,7 +44,8 @@ skill's base directory). If you can't find it, ask the user where they unpacked 
 When a workspace exists, compare it with the template. Add missing folders and files. For
 changed template files (`lenses.md`, `wiki/README.md`, `AGENTS.md`), show the differences and
 let the user choose; never overwrite their customizations. Replace `tools/` with the new
-version unless the user changed it (compare first).
+version unless the user changed it (compare first). Then write the new version and today's
+date to `.pm-toolkit-version`.
 
 ## Rules
 - Don't install anything, add connectors, or change Claude Code settings. The scripts in
