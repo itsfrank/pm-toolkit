@@ -19,7 +19,7 @@ browser, and `/wiki cheatsheet` shows this page.
 | have other work | "Prep me for my call with…", "Check this datasheet", "Compare us with…", "Gap analysis against…" | Call prep or debrief, a fact-check, a comparison, a gap table |
 
 ## Reading and notes
-- Open the viewer: `/wiki open` opens it in your browser (only you can reach it).
+- Open the viewer: `/wiki open` opens it in your browser (it runs only on this computer).
   `/wiki close` stops it. Without Claude: `python3 tools/viewer/serve.py --open` (Ctrl+C stops it).
 - Select any text and click **Note** to leave a comment. Claude processes notes when you
   say "go through my notes", and tells you when there are open ones.
@@ -46,4 +46,5 @@ picks up where it left off.
 
 ## Safety
 - Nothing is sent anywhere. You copy drafts out yourself after reading them.
-- Every change is in git, so anything can be undone: ask Claude to show or undo a change.
+- If the workspace uses git, say "commit this" after work you want to keep. Anything
+  committed can be shown or undone; uncommitted changes can't.

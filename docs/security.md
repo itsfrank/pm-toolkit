@@ -1,11 +1,27 @@
 # Security and data boundaries
 
-`pm-toolkit` is Markdown skills, templates and a wiki, plus a few helper scripts and a local
-viewer that use only the Python standard library and plain browser JavaScript. It needs no
-connectors, MCP servers, hooks, background jobs, package installs or external write access.
-The viewer listens on 127.0.0.1 only and writes one file, `wiki/notes.jsonl`. That makes it easier to keep
-the toolkit inside your employer's rules, but it does not enforce those rules. Your
-employer's policy and your tool's enforced permissions are the real controls.
+## For your security reviewer
+
+`pm-toolkit` is Markdown instructions for a coding agent (Claude Code), a folder template,
+a helper script (`tools/wiki.py`) and a local viewer (`tools/viewer/`). The scripts use only
+the Python standard library and plain browser JavaScript. Nothing is installed from the
+network; there are no hooks, background jobs, MCP servers or connectors of its own.
+
+| | What | Where |
+|---|---|---|
+| **Reads** | documents the PM saves; the workspace's own files | the workspace folder |
+| | Claude Code's session logs, for `wiki.py spend` only (optional) | `~/.claude/projects/` |
+| | connectors the PM already has, if any, read-only by rule | as configured by the PM |
+| **Writes** | wiki pages, source cards, reports, work folders, `notes.jsonl` | the workspace folder only |
+| **Never sends** | no email, posts, uploads, tickets or comments (a rule; see below); outputs are drafts the PM copies out | |
+| **Network** | the viewer listens on 127.0.0.1 only; the scripts make no network calls | |
+
+What does leave the machine: everything the agent reads or writes goes to the model
+provider as part of the conversation, and connector search queries go to that connector.
+The rules forbid building queries from document text. Rules in `AGENTS.md` are guidance to
+the model; enforce the boundaries above with Claude Code permissions and connector scopes
+(section 5): your employer's policy and enforced permissions are the real controls. The
+whole toolkit is short enough to review in one sitting.
 
 ## 1. Get authorization first
 
