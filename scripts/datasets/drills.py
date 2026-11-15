@@ -86,7 +86,8 @@ def silence(n, rng, report):
     picked = rng.sample(neg, min(len(neg), n - n // 3)) + rng.sample(pos, min(len(pos), n // 3))
     docs = []
     for off in range(0, 22530, 100):  # the whole corpus via the rows API, cached; 1 req/s
-        page = fetch_json(f"{ROWS}?dataset=aeriesec/orgforge&config=default&split=train&offset={off}&length=100")
+        page = fetch_json(f"{ROWS}?dataset=aeriesec/orgforge&config=default&split=train&offset={off}&length=100",
+                          min_interval=4, retries=8)  # this endpoint rate-limits hard
         if not page or not page.get("rows"):
             break
         docs += [r["row"] for r in page["rows"]]
@@ -255,8 +256,8 @@ def parse_report(body_html):
             cur["rating"] = (r.group(1) or r.group(2)).lower()
         if l.endswith(":") or l.lower().startswith(("actions the", "optional advice", "during the assessment")):
             label = l.lower()
-        elif l.startswith("•"):
-            (cur["advice"] if "optional" in label else cur["actions"]).append(l.lstrip("• ").strip())
+        elif l[:1] in "•●▪◦":
+            (cur["advice"] if "optional" in label else cur["actions"]).append(l.lstrip("•●▪◦ ").strip())
         elif len(l) > 80:
             cur["narrative"].append(l)
     return meta, desc, points
@@ -354,8 +355,8 @@ def herb(n, rng, report, product="CoachForce"):
     for m in d["slack"]:
         msg = m["Message"]
         by_day.setdefault((m["Channel"]["name"], msg["User"]["timestamp"][:10]), []).append(
-            f"[{msg['User']['timestamp'][11:16]}] {msg['User']['userId']}: {msg['text']}" +
-            "".join(f"\n    ↳ {x['User']['userId']}: {x['text']}" for x in m.get("ThreadReplies", [])))
+            f"[{msg['User']['timestamp'][11:16]}] {msg['User']['userId']}: {msg.get('text', '')}" +
+            "".join(f"\n    ↳ {x.get('User', {}).get('userId', '?')}: {x.get('text', '')}" for x in m.get("ThreadReplies", [])))
     for (ch, day), msgs in by_day.items():
         write(ws / "wiki" / "raw" / f"{day}-chat-{slug(ch, 30)}.md", f"# Chat export #{ch}, {day}\n\n" + "\n".join(msgs) + "\n")
     write(ws / "wiki" / "raw" / "2026-07-01-pull-requests.md", "# Pull requests\n\n" + "\n\n".join(
