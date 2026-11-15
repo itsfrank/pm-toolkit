@@ -22,14 +22,18 @@ Output: `work/<slug>/landscape.md` (or `work/YYYY-MM-DD-landscape-<topic>/landsc
    on into `wiki/raw/` with a card before citing it. Ticket text and comments are `hearsay`
    or `secondary`. For sources already in the wiki that are due for a recheck, run
    `wiki-refresh` on them.
-3. Read the matching pages and the source cards behind them. Then read the matching raw
-   files themselves: cards and pages are summaries, and the decisive detail often sits in a
+3. Read the matching pages and the source cards behind them.
+4. **Raw details (don't skip, even if you read raw files another way):** run
+   `python3 tools/wiki.py raw-hits <terms...>` with the whole term list. It prints raw-file
+   lines matching a term that no card or page mentions. Read each reported line in context.
+   Then read the other matching raw files: the decisive detail often sits in a
    "Limitations" section, a footnote or a draft proposal that nobody filed. Always read the
    raw file when its card says "not yet filed", is thin, or the grep hit is in a section the
    card doesn't summarize.
-4. Write `landscape.md` (template below). Every row cites a source or says `(unknown)`.
-5. List facts you found in raw files that aren't in the wiki yet and offer to file them with
-   `wiki-ingest`.
+5. Write `landscape.md` (template below). Every row cites a source or says `(unknown)`.
+   Under `## Raw details not in the wiki`, account for every file `raw-hits` reported:
+   the fact, where you used it above, or why it doesn't bear on the topic. Offer to file
+   these with `wiki-ingest`.
 
 ## landscape.md
 ```
@@ -57,11 +61,13 @@ Places where two teams, products or sources disagree or would both claim this.
 Areas where the wiki has nothing. For each: who probably knows, what document might exist.
 ## Should talk to
 Ranked list with the specific question for each person.
+## Raw details not in the wiki
+One line per file `raw-hits` reported: the fact [S-NNNN], where it is used, or why not.
 ```
 
 ## Rules
 - Absence in the wiki means "unknown", never "doesn't exist". Before writing `(unknown)`,
-  grep `wiki/raw/` for the specific item once more.
+  run `raw-hits` (or grep `wiki/raw/`) for the specific item once more.
 - Report draft proposals (pricing, packaging, scope) with their content and their status,
   e.g. "draft memo proposes X as a paid add-on (not approved) [S-NNNN]", not only "draft".
 - Show source trust when it matters: a capability backed only by `marketing` or `hearsay` is

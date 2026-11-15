@@ -28,8 +28,9 @@ with the pm-toolkit skills. Follow these rules for every task.
   commitment carries a citation `[S-0012]` or a label: `(inferred)`, `(assumption)`,
   `(unknown)`. Wiki page links are not sources; cite the source card behind the page.
 - Never invent quotes, customer evidence, metrics, owners, dates or approvals. "Unknown"
-  plus a question and a person to ask is a good answer. Before writing `(unknown)`, grep
-  `wiki/raw/` for the specific item: cards and pages summarize, raw files hold the detail.
+  plus a question and a person to ask is a good answer. Before writing `(unknown)`, search
+  `wiki/raw/` for the specific item (`python3 tools/wiki.py raw-hits <terms>` lists raw
+  details no card or page mentions): cards and pages summarize, raw files hold the detail.
 - No public mention of a capability is not evidence that it doesn't exist. Mark it unknown.
 - When sources conflict, show both with their dates and trust levels. Don't pick silently.
 - Prefer newer, authoritative sources (owner-written docs, specs, shipped release notes) over

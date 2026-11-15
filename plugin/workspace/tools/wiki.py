@@ -6,6 +6,7 @@ Standard library only (Python 3.8+). Run from the workspace root or pass --root.
   python3 tools/wiki.py next-id
   python3 tools/wiki.py cards-from-raw [--dry-run] [FILE ...]
   python3 tools/wiki.py due [--today YYYY-MM-DD]
+  python3 tools/wiki.py raw-hits TERM [TERM ...] [--all]
   python3 tools/wiki.py notes [--all] [--json]
   python3 tools/wiki.py note-status ID STATUS --resolution TEXT [--by NAME]
   python3 tools/wiki.py lint [--json] [--today YYYY-MM-DD]
@@ -194,6 +195,42 @@ def cmd_due(wiki, args):
     for sid, f, why in rows:
         print(f"{sid}  {f.get('title', '')}  [{why}]  {f.get('origin_url') or f.get('origin_id')}")
     print(f"{len(rows)} source(s) due for a recheck")
+
+
+def raw_hits(wiki, terms, show_all=False, per_file=8):
+    """Lines in raw files that match a term which the file's card and the pages citing that
+    card never mention: the details summaries most often drop."""
+    terms = [t.lower() for t in terms if len(t) >= 2]
+    by_origin = {str(f.get("origin", "")): (sid, read(path).lower()) for sid, (path, f, _) in wiki.cards().items()}
+    page_text = {p: read(p).lower() for p in wiki.pages()}
+    out = []
+    for raw in wiki.raw_files():
+        if raw.suffix.lower() not in (".md", ".txt", ".csv", ".html", ".eml"):
+            continue
+        sid, card = by_origin.get(wiki.rel(raw).replace("wiki/", "", 1), (None, ""))
+        summaries = card + "".join(t for t in page_text.values() if sid and sid.lower() in t)
+        hits = []
+        for n, line in enumerate(read(raw).splitlines(), 1):
+            low = line.lower()
+            matched = [t for t in terms if t in low]
+            new = [t for t in matched if t not in summaries]
+            if new or (show_all and matched):
+                hits.append((n, new or matched, line.strip()))
+        if hits:
+            out.append((wiki.rel(raw), sid, hits[:per_file], len(hits)))
+    return out
+
+
+def cmd_raw_hits(wiki, args):
+    rows = raw_hits(wiki, args.terms, args.all)
+    for path, sid, hits, total in rows:
+        print(f"{path}  [{sid or 'no card'}]")
+        for n, terms, line in hits:
+            print(f"  {n}: ({', '.join(terms)}) {line[:160]}")
+        if total > len(hits):
+            print(f"  ... {total - len(hits)} more lines")
+    print(f"{len(rows)} raw file(s) with details not in their card or pages"
+          + (" (or matching, with --all)" if args.all else ""))
 
 
 def anchor(wiki, note):
@@ -451,6 +488,10 @@ def main():
     p = sub.add_parser("due", help="list sources due for a freshness recheck")
     p.add_argument("--today")
     p.set_defaults(fn=cmd_due)
+    p = sub.add_parser("raw-hits", help="raw lines matching terms that cards and pages don't mention")
+    p.add_argument("terms", nargs="+")
+    p.add_argument("--all", action="store_true", help="also show lines whose terms are summarized")
+    p.set_defaults(fn=cmd_raw_hits)
     p = sub.add_parser("notes", help="list notes and where their quotes are now")
     p.add_argument("--all", action="store_true", help="include closed notes")
     p.add_argument("--json", action="store_true")
