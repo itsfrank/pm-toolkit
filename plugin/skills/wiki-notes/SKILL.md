@@ -11,7 +11,8 @@ the quoted text, the line then, the commit then, and the note text.
 ## Steps
 1. List open notes: `python3 tools/wiki.py notes`. It shows where each quote is now
    (`exact`, `moved`, `fuzzy`, `lost`). For `fuzzy` or `lost`, read the page around the old
-   line, and `git log -p` for that file since the note's commit if git is available.
+   line, and `git log -p` for that file since the note's commit if git is available. When the
+   PM answers a `needs-info` note in chat, run `wiki.py note-reply <id> "<answer>"`; it reopens.
 2. Group notes by page. Read each page once.
 3. Classify each note and act:
    - **Correction** ("this is wrong, it's X"): if a source supports X, fix the page with that

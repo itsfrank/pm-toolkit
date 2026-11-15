@@ -12,12 +12,13 @@ Standard library only (Python 3.8+). Run from the workspace root or pass --root.
   python3 tools/wiki.py spend [--since ISO_TIME] [--marker TEXT] [--session FILE] [--json]
   python3 tools/wiki.py notes [--all] [--json]
   python3 tools/wiki.py note-status ID STATUS --resolution TEXT [--by NAME]
+  python3 tools/wiki.py note-reply ID TEXT
   python3 tools/wiki.py lint [--json] [--today YYYY-MM-DD]
   python3 tools/wiki.py reports-index
 
 Dates default to today; set PM_TODAY=YYYY-MM-DD to pin them (the sample and evals do).
 
-Read-only except: cards-from-raw writes new cards, note-status appends to notes.jsonl,
+Read-only except: cards-from-raw writes new cards, note-status and note-reply append to notes.jsonl,
 reports-index rewrites wiki/reports/INDEX.md, catalog-mark edits one catalog line.
 spend reads Claude Code's own session logs under ~/.claude/projects/ (read-only).
 """
@@ -28,6 +29,7 @@ import json
 import os
 import pathlib
 import re
+import secrets
 import sys
 
 VERSION = "0.1.0"  # the toolkit release these tools came with; keep equal to plugin.json
@@ -120,8 +122,12 @@ class Wiki:
             except ValueError:
                 print(f"notes.jsonl:{n}: not valid JSON, skipped", file=sys.stderr)
                 continue
-            if event.get("type") == "note":
-                notes[event["id"]] = dict(event, status="open", history=[])
+            if event.get("type") == "note" and event.get("parent") in notes:  # a reply reopens its note
+                parent = notes[event["parent"]]
+                parent["status"] = "open"
+                parent["replies"].append(event.get("text", ""))
+            elif event.get("type") == "note":
+                notes[event["id"]] = dict(event, status="open", history=[], replies=[])
             elif event.get("type") == "status" and event.get("id") in notes:
                 notes[event["id"]]["status"] = event.get("status", "open")
                 notes[event["id"]]["history"].append(event)
@@ -470,14 +476,27 @@ def cmd_notes(wiki, args):
         rows.append(dict(id=note["id"], status=note["status"], file=note.get("file"),
                          line_then=note.get("line"), line_now=line, anchor=how,
                          quote=(note.get("quote") or {}).get("exact", ""), text=note.get("text", ""),
-                         created=note.get("created"), commit=note.get("commit")))
+                         created=note.get("created"), commit=note.get("commit"), replies=note["replies"]))
     if args.json:
         print(json.dumps(rows, indent=2))
         return
     for r in rows:
         print(f"{r['id']}  [{r['status']}]  {r['file']}:{r['line_now'] or '?'} ({r['anchor']})\n"
-              f"    quote: {r['quote'][:100]!r}\n    note:  {r['text'][:200]!r}")
+              f"    quote: {r['quote'][:100]!r}\n    note:  {r['text'][:200]!r}"
+              + "".join(f"\n    reply: {t[:200]!r}" for t in r["replies"]))
     print(f"{len(rows)} note(s)")
+
+
+def cmd_note_reply(wiki, args):
+    """Record the PM's answer to a note; the note is open again for wiki-notes."""
+    if args.id not in wiki.notes():
+        sys.exit(f"unknown note id {args.id}")
+    now = datetime.datetime.now()
+    event = {"type": "note", "id": "N-" + now.strftime("%Y%m%d-%H%M%S-") + secrets.token_hex(2),
+             "parent": args.id, "created": now.isoformat(timespec="seconds"), "text": args.text}
+    with open(wiki.wiki / "notes.jsonl", "a", encoding="utf-8") as f:
+        f.write(json.dumps(event, ensure_ascii=False) + "\n")
+    print(f"{args.id} -> open (reply recorded)")
 
 
 def cmd_note_status(wiki, args):
@@ -627,6 +646,11 @@ def cmd_lint(wiki, args):
         print("lint: no mechanical issues found")
 
 
+# Work folder types by name prefix (work/YYYY-MM-DD-<prefix>...); anything else is an ask.
+WORK_TYPES = {"rfp-": "rfp", "mktg-": "marketing", "call-": "call", "expand-": "expand",
+              "gaps-": "gaps", "compete-": "competitive", "landscape-": "landscape"}
+
+
 def status(wiki, today):
     """What needs the PM's attention: open notes, due sources, lint age, recent work."""
     notes = [n for n in wiki.notes().values() if n["status"] in ("open", "needs-info")]
@@ -637,9 +661,15 @@ def status(wiki, today):
     if work.is_dir():
         for d in sorted((d for d in work.iterdir() if d.is_dir() and re.match(r"\d{4}-\d{2}-\d{2}-", d.name)
                          and "wiki-lint" not in d.name), reverse=True)[:5]:
-            stages = [s for s in ("intake", "landscape", "coverage", "prd", "critical-review")
-                      if (d / f"{s}.md").exists()]
-            asks.append({"folder": f"work/{d.name}", "stages": stages})
+            kind = next((k for prefix, k in WORK_TYPES.items() if d.name[11:].startswith(prefix)), "ask")
+            if kind == "ask":
+                stages = [s for s in ("intake", "landscape", "coverage", "prd") if (d / f"{s}.md").exists()]
+                reviews = sorted(int(m.group(1)) for p in d.glob("review-*.md")
+                                 for m in [re.fullmatch(r"review-(\d+)\.md", p.name)] if m)
+                stages += [f"critical-review ({len(reviews)})"] if reviews else []
+            else:
+                stages = sorted(p.stem for p in d.glob("*.md") if p.name != "README.md")
+            asks.append({"folder": f"work/{d.name}", "type": kind, "stages": stages})
     reports = []
     for path in sorted(wiki.reports(), reverse=True)[:3]:
         fields, body = frontmatter(read(path))
@@ -648,15 +678,19 @@ def status(wiki, today):
     catalog = catalog_entries(wiki) if (wiki.wiki / "catalog").is_dir() else []
     marker = wiki.root / ".pm-toolkit-version"
     installed = re.search(r"\d+\.\d+(\.\d+)?", read(marker)) if marker.exists() else None
+    empty = not wiki.pages() and not wiki.cards()
+    waiting = [{"id": n["id"], "file": n.get("file"), "note": n.get("text", ""),
+                "needs": (n["history"][-1].get("resolution") if n["history"] else "")}
+               for n in notes if n["status"] == "needs-info"]
     return {"tools_version": VERSION, "installed_version": installed.group(0) if installed else None,
             "upgrade_pending": bool(installed) and installed.group(0) != VERSION,
             "open_notes": len([n for n in notes if n["status"] == "open"]),
             "catalog_pages": len(catalog), "catalog_ingested": len([e for e in catalog if e["done"]]),
             "unfinished_runs": sorted(wiki.rel(h.parent) for h in work.glob("*/HANDOFF.md")) if work.is_dir() else [],
-            "needs_info_notes": len([n for n in notes if n["status"] == "needs-info"]),
+            "needs_info_notes": len(waiting), "needs_info": waiting,
             "sources_due": len(due(wiki, today)),
             "last_lint": last_lint.isoformat() if last_lint else None,
-            "lint_due": last_lint is None or (today - last_lint).days > 30,
+            "lint_due": not empty and (last_lint is None or (today - last_lint).days > 30),
             "recent_reports": reports, "recent_asks": asks}
 
 
@@ -666,10 +700,15 @@ def cmd_status(wiki, args):
         print(json.dumps(s, indent=2))
         return
     print(f"Open notes: {s['open_notes']} (waiting on you: {s['needs_info_notes']})")
+    for n in s["needs_info"]:
+        print(f"  {n['id']} ({n['file']}): {n['note'][:100]!r} needs: {n['needs'][:120]}")
+    if s["needs_info"]:
+        print('  Record the PM\'s answer with: python3 tools/wiki.py note-reply <id> "<answer>"')
     print(f"Sources due for a recheck: {s['sources_due']}")
     print(f"Last wiki check: {s['last_lint'] or 'never'}{' (due)' if s['lint_due'] else ''}")
     for a in s["recent_asks"]:
-        print(f"Ask: {a['folder']} [{', '.join(a['stages']) or 'not started'}]")
+        label = "Ask" if a["type"] == "ask" else f"Work ({a['type']})"
+        print(f"{label}: {a['folder']} [{', '.join(a['stages']) or 'not started'}]")
     for r in s["recent_reports"]:
         print(f"Report: {r['title']} ({r['path']})")
     if s["catalog_pages"]:
@@ -744,6 +783,10 @@ def main():
     p.add_argument("--resolution", required=True)
     p.add_argument("--by", default="agent")
     p.set_defaults(fn=cmd_note_status)
+    p = sub.add_parser("note-reply", help="record the PM's answer to a note; reopens it")
+    p.add_argument("id")
+    p.add_argument("text")
+    p.set_defaults(fn=cmd_note_reply)
     p = sub.add_parser("lint", help="mechanical wiki checks")
     p.add_argument("--json", action="store_true")
     p.add_argument("--today")

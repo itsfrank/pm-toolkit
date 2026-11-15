@@ -113,6 +113,46 @@ class WikiTools(unittest.TestCase):
         titles = re.findall(r"\] (Gizmo plan \w)", self.run_wiki("catalog-search", "gizmo"))
         self.assertEqual(titles, ["Gizmo plan C", "Gizmo plan B", "Gizmo plan A"])
 
+    # status and notes
+    def test_status_folder_types_and_review_stage(self):
+        ask = "work/2026-10-05-eu-data-residency"
+        self.write(f"{ask}/intake.md", "# Intake\n")
+        self.write(f"{ask}/review-1.md", "# Review 1\n")
+        self.write(f"{ask}/review-2.md", "# Review 2\n")
+        self.write("work/2026-10-06-rfp-halvard/answers.md", "# Answers\n")
+        self.write("work/2026-10-06-call-nordhavn/prep.md", "# Prep\n")
+        rows = {a["folder"]: a for a in self.status()["recent_asks"]}
+        self.assertEqual(rows[f"work/{ask[5:]}"]["stages"], ["intake", "critical-review (2)"])
+        self.assertEqual(rows["work/2026-10-06-rfp-halvard"]["type"], "rfp")
+        self.assertEqual(rows["work/2026-10-06-call-nordhavn"]["type"], "call")
+        out = self.run_wiki("status")
+        self.assertIn("Work (rfp): work/2026-10-06-rfp-halvard [answers]", out)
+        self.assertNotIn("rfp-halvard [not started]", out)
+
+    def test_status_no_lint_offer_on_empty_wiki(self):
+        self.assertTrue(self.status()["lint_due"])
+        shutil.rmtree(self.ws / "wiki" / "pages")
+        for card in (self.ws / "wiki" / "sources").glob("S-*.md"):
+            card.unlink()
+        self.assertFalse(self.status()["lint_due"])
+
+    def test_needs_info_notes_listed_and_reopened_by_reply(self):
+        note = {"type": "note", "id": "N-1", "file": "wiki/pages/products/kestrel-collect.md",
+                "quote": {"exact": "Kestrel Collect"}, "line": 1, "text": "Fetch the SDK page and add it."}
+        self.write("wiki/notes.jsonl", json.dumps(note) + "\n")
+        self.run_wiki("note-status", "N-1", "needs-info", "--resolution", "a fetch: confirm in chat")
+        s = self.status()
+        self.assertEqual(s["needs_info_notes"], 1)
+        self.assertEqual(s["needs_info"][0]["needs"], "a fetch: confirm in chat")
+        self.assertIn("note-reply", self.run_wiki("status"))
+        self.assertNotIn("N-1", self.run_wiki("notes"))
+        self.run_wiki("note-reply", "N-1", "Yes, fetch it.")
+        out = self.run_wiki("notes")
+        self.assertIn("N-1  [open]", out)
+        self.assertIn("reply: 'Yes, fetch it.'", out)
+        self.assertIn("1 note(s)", out)
+        self.assertEqual(self.status()["needs_info_notes"], 0)
+
 
 if __name__ == "__main__":
     unittest.main()
