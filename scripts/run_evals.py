@@ -259,11 +259,17 @@ def checked(verdict, key, positive, haystack):
 
 def invalid(v, find_ids, not_ids):
     """Why a judge verdict is unusable (missing or duplicate ids, unknown verdicts), or None."""
+    if not isinstance(v, dict):
+        return "verdict is not a JSON object"
     if "error" in v:
         return v["error"]
     for key, ids, ok in (("items", find_ids, {"found", "missed", "unclear"}),
                          ("violations", not_ids, {"violated", "clean", "unclear"})):
-        got = [x.get("id") for x in v.get(key, [])]
+        entries = v.get(key, [])
+        if not isinstance(entries, list) or not all(isinstance(x, dict) and isinstance(x.get("id"), str)
+                                                    for x in entries):
+            return f"malformed {key}"
+        got = [x["id"] for x in entries]
         if sorted(got) != sorted(ids):
             return f"{key} ids {sorted(set(ids) ^ set(got))} missing or extra"
         if any(x.get("verdict") not in ok for x in v.get(key, [])):
@@ -276,7 +282,8 @@ def grade(case, facts, run, args, reuse=None):
     ctx = {"ws": pathlib.Path(run["workspace"]), "haystack": run["output"] + "\n" + run["changed"] + "\n" + run["reply"],
            "log": run.get("log", []), "files": set(run.get("files", []))}
     if ctx["ws"].exists() and not run.get("files"):  # runs saved before bundles held these
-        ctx["files"] = {str(p.relative_to(ctx["ws"])) for p in ctx["ws"].rglob("*")}
+        run["files"] = sorted(str(p.relative_to(ctx["ws"])) for p in ctx["ws"].rglob("*"))
+        ctx["files"] = set(run["files"])
     hay = norm(ctx["haystack"])
     mech_find = {i["id"]: mechanical(i, ctx) for i in case["must_find"]}
     mech_not = {i["id"]: mechanical(i, ctx) for i in case["must_not"]}
@@ -284,8 +291,9 @@ def grade(case, facts, run, args, reuse=None):
     # the log check AND the judges (the log shows the page was fetched, judges the use of it).
     judge_find = [i for i in case["must_find"] if mech_find[i["id"]] is None or "log_check" in i]
     judge_not = [i for i in case["must_not"] if mech_not[i["id"]] is None]
-    sources = run.get("sources") or (cited_sources(ctx["ws"], run["output"] + run["changed"])
-                                     if ctx["ws"].exists() else "(no cited sources saved)")
+    if not run.get("sources") and ctx["ws"].exists():  # recovered evidence is saved with regrades
+        run["sources"] = cited_sources(ctx["ws"], run["output"] + run["changed"])
+    sources = run.get("sources") or "(no cited sources saved)"
     find_ids, not_ids = [i["id"] for i in judge_find], [i["id"] for i in judge_not]
     verdicts = {}
     prompt = judge_prompt(case, judge_find, judge_not, facts, run["output"], run["changed"], run["reply"], sources)
