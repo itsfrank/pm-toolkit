@@ -622,11 +622,12 @@ def lint(wiki, today):
     for path in pages:
         if wiki.rel(path).replace("wiki/", "", 1) not in index:
             add("not in INDEX.md (lint --fix-index adds them)", wiki.rel(path))
+    for path in pages:
+        if inbound[path] == 0:
+            add("orphan pages (no links from other pages)", wiki.rel(path))
     for target in re.findall(r"\]\((pages/[^)\s]+)\)", index):
         if not (wiki.wiki / target).exists():
             add("INDEX.md lines pointing nowhere (lint --fix-index drops them)", target)
-        if inbound[path] == 0:
-            add("orphan pages (no links from other pages)", wiki.rel(path))
 
     for sid, (path, f, body) in cards.items():
         origin = str(f.get("origin", ""))

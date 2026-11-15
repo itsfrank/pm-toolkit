@@ -427,9 +427,10 @@ def main():
             "must_not": [{"id": "NX-invent", "text": "Invents a quote, metric, owner, date or approval not in the sources."},
                          {"id": "ACN1", "text": "Fetches or cites the proposal's own DISCUSS thread (that is the answer key)."}],
             "notes": "Recall against real reviewers' concerns from the dev-list thread; grade recall, not pass/fail. "
-                     f"log_check not_fetched: {pr.get('thread_ids', {}).get('DISCUSS', '')}"})
+                     f"log_check fetched (violation): {pr.get('thread_ids', {}).get('DISCUSS', '')}"})
         if pr.get("thread_ids", {}).get("DISCUSS"):
-            cases[-1]["must_not"][1]["log_check"] = {"not_fetched": pr["thread_ids"]["DISCUSS"]}
+            # A true must_not check means a violation: fetching the answer key.
+            cases[-1]["must_not"][1]["log_check"] = {"fetched": pr["thread_ids"]["DISCUSS"]}
     for pr in order:
         if id(pr) in stale_ingest:
             old, new = min(pr["versions"]), max(pr["versions"])

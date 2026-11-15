@@ -155,7 +155,7 @@ def mechanical(item, ctx):
     chk, log = item.get("check"), item.get("log_check")
     if chk:
         if "file_exists" in chk:
-            return (ctx["ws"] / chk["file_exists"]).exists()
+            return chk["file_exists"].rstrip("/") in ctx["files"]
         if "contains" in chk:
             return chk["contains"] in ctx["haystack"]
         if "regex" in chk:
@@ -257,10 +257,26 @@ def checked(verdict, key, positive, haystack):
     return out, bad
 
 
+def invalid(v, find_ids, not_ids):
+    """Why a judge verdict is unusable (missing or duplicate ids, unknown verdicts), or None."""
+    if "error" in v:
+        return v["error"]
+    for key, ids, ok in (("items", find_ids, {"found", "missed", "unclear"}),
+                         ("violations", not_ids, {"violated", "clean", "unclear"})):
+        got = [x.get("id") for x in v.get(key, [])]
+        if sorted(got) != sorted(ids):
+            return f"{key} ids {sorted(set(ids) ^ set(got))} missing or extra"
+        if any(x.get("verdict") not in ok for x in v.get(key, [])):
+            return f"unknown verdict in {key}"
+    return None
+
+
 def grade(case, facts, run, args, reuse=None):
     """Combine mechanical checks and both judges into per-item and run-level results."""
     ctx = {"ws": pathlib.Path(run["workspace"]), "haystack": run["output"] + "\n" + run["changed"] + "\n" + run["reply"],
-           "log": run.get("log", [])}
+           "log": run.get("log", []), "files": set(run.get("files", []))}
+    if ctx["ws"].exists() and not run.get("files"):  # runs saved before bundles held these
+        ctx["files"] = {str(p.relative_to(ctx["ws"])) for p in ctx["ws"].rglob("*")}
     hay = norm(ctx["haystack"])
     mech_find = {i["id"]: mechanical(i, ctx) for i in case["must_find"]}
     mech_not = {i["id"]: mechanical(i, ctx) for i in case["must_not"]}
@@ -268,17 +284,24 @@ def grade(case, facts, run, args, reuse=None):
     # the log check AND the judges (the log shows the page was fetched, judges the use of it).
     judge_find = [i for i in case["must_find"] if mech_find[i["id"]] is None or "log_check" in i]
     judge_not = [i for i in case["must_not"] if mech_not[i["id"]] is None]
-    sources = cited_sources(ctx["ws"], run["output"] + run["changed"]) if ctx["ws"].exists() else "(workspace gone)"
+    sources = run.get("sources") or (cited_sources(ctx["ws"], run["output"] + run["changed"])
+                                     if ctx["ws"].exists() else "(no cited sources saved)")
+    find_ids, not_ids = [i["id"] for i in judge_find], [i["id"] for i in judge_not]
     verdicts = {}
     prompt = judge_prompt(case, judge_find, judge_not, facts, run["output"], run["changed"], run["reply"], sources)
-    if (judge_find or judge_not) and reuse:
-        verdicts = {n: v for n, v in reuse.items() if n in args.graders}
+    if (judge_find or judge_not) and reuse is not None:  # --reuse-verdicts: no new judge calls
+        for name in args.graders:
+            v = reuse.get(name) or {"error": f"no saved {name} verdict"}
+            bad = invalid(v, find_ids, not_ids)
+            verdicts[name] = {"error": f"{name}: {bad}"} if bad else v
     elif judge_find or judge_not:
         for name in args.graders:
-            v, cost = call_judge(name, prompt, args.timeout)
-            if "error" in v:  # one retry, then the run is excluded
+            for _ in range(2):  # one retry, then the run is excluded
                 v, cost = call_judge(name, prompt, args.timeout)
-            verdicts[name] = dict(v, cost_usd=cost)
+                bad = invalid(v, find_ids, not_ids)
+                if not bad:
+                    break
+            verdicts[name] = {"error": f"{name}: {bad}", "raw": v} if bad else dict(v, cost_usd=cost)
     if any("error" in v for v in verdicts.values()):
         return {"status": "error", "error": "; ".join(v["error"] for v in verdicts.values() if "error" in v),
                 "verdicts": verdicts}
@@ -298,7 +321,7 @@ def grade(case, facts, run, args, reuse=None):
             elif mech[iid] is False:  # log check failed: not found, whatever the judges say
                 ys, who = [False], ["log_check"]
             else:
-                ys = [{"yes": True, "no": False}.get(votes[n].get(iid, "no")) for n in verdicts]
+                ys = [{"yes": True, "no": False}.get(votes[n][iid]) for n in verdicts]
                 who = list(verdicts)
             if len(set(ys)) != 1 or None in ys:
                 disputed.append(iid)
@@ -324,6 +347,26 @@ def grade(case, facts, run, args, reuse=None):
 
 # ---------- orchestration ----------
 
+BUNDLE = ("output", "changed", "reply", "sources")
+
+
+def save_bundle(run, run_dir):
+    """Everything grading needs, so a run can be re-graded after its workspace is gone."""
+    run_dir.mkdir(parents=True, exist_ok=True)
+    for name in BUNDLE:
+        (run_dir / f"{name}.md").write_text(run.get(name, ""), encoding="utf-8")
+    (run_dir / "run.json").write_text(json.dumps({k: v for k, v in run.items() if k not in BUNDLE}, indent=2),
+                                      encoding="utf-8")
+
+
+def load_bundle(run_dir):
+    run = json.loads((run_dir / "run.json").read_text())
+    for name in BUNDLE:
+        f = run_dir / f"{name}.md"
+        run[name] = f.read_text(encoding="utf-8") if f.exists() else ""
+    return run
+
+
 def run_case(case, rep, facts, args, outdir):
     run_dir = outdir / case["id"] / f"run{rep}"
     run_dir.mkdir(parents=True)
@@ -333,15 +376,20 @@ def run_case(case, rep, facts, args, outdir):
     model = args.strong_model if case["skill"] in STRONG_SKILLS else args.model
     agent = run_agent(case, ws, model, args, mcp)
     out = find_output(ws, case)
+    if out and out.is_dir():  # a folder output: the files the run created or changed in it
+        new = [p for p in sorted(out.rglob("*")) if p.is_file() and before.get(p) != p.read_text(encoding="utf-8", errors="replace")]
+        output = "\n\n".join(f"### {p.relative_to(ws)}\n{p.read_text(encoding='utf-8', errors='replace')}" for p in new) \
+            or "(no files created or changed in the output folder)"
+    else:
+        output = out.read_text(encoding="utf-8") if out else "(no output file produced)"
+    changed = changed_files(ws, before, out if out and out.is_file() else None)
     run = {"case_id": case["id"], "rep": rep, "model": model, "workspace": str(ws), "agent": agent,
-           "output_path": str(out.relative_to(ws)) if out else None,
-           "output": out.read_text(encoding="utf-8") if out else "(no output file produced)",
-           "changed": changed_files(ws, before, out), "reply": agent.get("reply", ""),
+           "output_path": str(out.relative_to(ws)) if out else None, "output": output,
+           "changed": changed, "reply": agent.get("reply", ""),
+           "files": sorted(str(p.relative_to(ws)) for p in ws.rglob("*") if not SKIP & set(p.parts)),
+           "sources": cited_sources(ws, output + changed),
            "log": [json.loads(line) for line in log.read_text().splitlines()] if log and log.exists() else []}
-    for name in ("output", "changed", "reply"):
-        (run_dir / f"{name}.md").write_text(run[name], encoding="utf-8")
-    (run_dir / "run.json").write_text(json.dumps({k: v for k, v in run.items() if k not in ("output", "changed", "reply")},
-                                                 indent=2), encoding="utf-8")
+    save_bundle(run, run_dir)
     if agent.get("error"):
         result = {"status": "error", "error": agent["error"]}
     else:
@@ -421,17 +469,16 @@ def regrade(args):
     outdir = src.parent / (src.name + "-regrade-" + datetime.datetime.now().strftime("%H%M%S"))
     results = []
     for run_json in sorted(src.glob("*/run*/run.json")):
-        run = json.loads(run_json.read_text())
         d = run_json.parent
-        run.update(output=(d / "output.md").read_text(), changed=(d / "changed.md").read_text(),
-                   reply=(d / "reply.md").read_text())
+        run = load_bundle(d)
         case = cases[run["case_id"]]
         old_grade = json.loads((d / "grade.json").read_text()) if (d / "grade.json").exists() else {}
-        reuse = old_grade.get("verdicts") if args.reuse_verdicts else None
+        reuse = (old_grade.get("verdicts") or {}) if args.reuse_verdicts else None
         r = grade(case, facts, run, args, reuse) if not run["agent"].get("error") else {"status": "error", "error": run["agent"]["error"]}
         r.update(case_id=run["case_id"], rep=run["rep"], model=run["model"], cost_usd=run["agent"].get("cost_usd"))
-        (outdir / run["case_id"] / f"run{run['rep']}").mkdir(parents=True, exist_ok=True)
-        (outdir / run["case_id"] / f"run{run['rep']}" / "grade.json").write_text(json.dumps(r, indent=2))
+        dest = outdir / run["case_id"] / f"run{run['rep']}"
+        save_bundle(run, dest)
+        (dest / "grade.json").write_text(json.dumps(r, indent=2))
         results.append(r)
     meta = dict(old, regraded_from=src.name, grader_sha=sha(ROOT / "evals" / "GRADER.md"),
                 judges=[f"{g}={JUDGES[g]}" for g in args.graders])

@@ -177,6 +177,11 @@ class WikiTools(unittest.TestCase):
             self.assertIn(line, text)
         self.assertIn("added 0 line(s), dropped 0", self.run_wiki("lint", "--fix-index"))
 
+    def test_lint_orphans_are_listed_once_each(self):
+        orphans = next(v for k, v in self.lint().items() if k.startswith("orphan pages"))
+        self.assertEqual(len(orphans), len(set(orphans)))
+        self.assertGreater(len(set(orphans)), 1)
+
     def test_lint_lists_unpromoted_reports_and_drafts_by_use(self):
         self.write("wiki/reports/2026-08-01-overlaps.md", "---\ntitle: Overlaps\nquestion: Where do plans clash?\n"
                    "as_of: 2026-08-01\nsources: [S-0004]\npromoted: no\n---\n# Overlaps\n")
