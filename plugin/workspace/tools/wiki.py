@@ -33,7 +33,7 @@ import re
 import secrets
 import sys
 
-VERSION = "0.1.0"  # the toolkit release these tools came with; keep equal to plugin.json
+VERSION = "0.2.0"  # the toolkit release these tools came with; keep equal to plugin.json
 CITE = re.compile(r"\[(S-\d{4}[^\]]*)\]")
 SID = re.compile(r"S-\d{4}")
 LABELS = ("(inferred)", "(assumption)", "(unknown)")
