@@ -6,6 +6,7 @@ Standard library only (Python 3.8+). Run from the workspace root or pass --root.
   python3 tools/wiki.py next-id
   python3 tools/wiki.py cards-from-raw [--dry-run] [FILE ...]
   python3 tools/wiki.py due [--today YYYY-MM-DD]
+  python3 tools/wiki.py pdf-text FILE.pdf [--pages-per-part N]
   python3 tools/wiki.py raw-hits TERM [TERM ...] [--all] [--files N]
   python3 tools/wiki.py catalog-search TERM [TERM ...] [--all] [--limit N]
   python3 tools/wiki.py catalog-mark ID_OR_URL S-NNNN
@@ -19,10 +20,10 @@ Standard library only (Python 3.8+). Run from the workspace root or pass --root.
 
 Dates default to today; set PM_TODAY=YYYY-MM-DD to pin them (the sample and evals do).
 
-Read-only except: cards-from-raw writes new cards, note-status and note-reply append to notes.jsonl,
-reports-index rewrites wiki/reports/INDEX.md, catalog-mark edits one catalog line,
-lint --fix-index edits wiki/INDEX.md, toolkit-branch commits to the git branch `pm-toolkit`
-(and, with --baseline, records a merge on the current branch).
+Read-only except: cards-from-raw writes new cards, pdf-text writes a PDF's text parts,
+note-status and note-reply append to notes.jsonl, reports-index rewrites wiki/reports/INDEX.md,
+catalog-mark edits one catalog line, lint --fix-index edits wiki/INDEX.md, toolkit-branch
+commits to the git branch `pm-toolkit` (and, with --baseline, records a merge on the current branch).
 spend --session-id reads one Claude Code session log under ~/.claude/projects/ (read-only).
 """
 import argparse
@@ -115,6 +116,11 @@ class Wiki:
         return sorted(p for p in (self.wiki / "raw").rglob("*")
                       if p.is_file() and not p.name.startswith("."))
 
+    def origin(self, raw):
+        """A raw file's card origin: the PDF for its text parts (raw/<name>/ next to <name>.pdf)."""
+        pdf = raw.parent.with_suffix(".pdf")
+        return self.rel(pdf if pdf.is_file() else raw).replace("wiki/", "", 1)
+
     def notes(self):
         """Fold the append-only notes log into {id: note with current status}."""
         path = self.wiki / "notes.jsonl"
@@ -179,7 +185,7 @@ def cmd_cards_from_raw(wiki, args):
     template = read(wiki.wiki / "sources" / "_TEMPLATE.md")
     for raw in raws:
         fields = guess_card(wiki, raw)
-        if fields["origin"] in carded:
+        if fields["origin"] in carded or wiki.origin(raw) != fields["origin"]:
             continue
         n += 1
         sid = f"S-{n:04d}"
@@ -444,7 +450,7 @@ def raw_hits(wiki, terms, show_all=False, per_file=8):
         if raw.suffix.lower() not in TEXT:
             skipped += 1
             continue
-        sid, card = by_origin.get(wiki.rel(raw).replace("wiki/", "", 1), (None, ""))
+        sid, card = by_origin.get(wiki.origin(raw), (None, ""))
         summaries = card + "".join(t for t in page_text.values() if sid and sid.lower() in t)
         known = set(TOKEN.findall(summaries))
         hits, found, page = [], set(), None
@@ -525,6 +531,94 @@ def cmd_notes(wiki, args):
               f"    quote: {r['quote'][:100]!r}\n    note:  {r['text'][:200]!r}"
               + "".join(f"\n    reply: {t[:200]!r}" for t in r["replies"]))
     print(f"{len(rows)} note(s)")
+
+
+# PDFKit through JavaScript for Automation: ships with macOS, nothing to install.
+PDF_JS = r"""
+ObjC.import("PDFKit");
+function run(argv) {
+  var d = $.PDFDocument.alloc.initWithURL($.NSURL.fileURLWithPath(argv[0]));
+  if (d.isNil()) return JSON.stringify({error: "cannot open " + argv[0]});
+  var pages = [], outline = [];
+  for (var i = 0; i < d.pageCount; i++) {
+    var s = d.pageAtIndex(i).string;
+    pages.push(s.isNil() ? "" : s.js);
+  }
+  function walk(o, level) {
+    for (var i = 0; i < o.numberOfChildren; i++) {
+      var c = o.childAtIndex(i), dest = c.destination;
+      outline.push([level, c.label.isNil() ? "" : c.label.js.trim(), dest.isNil() ? null : Number(d.indexForPage(dest.page)) + 1]);
+      walk(c, level + 1);
+    }
+  }
+  if (!d.outlineRoot.isNil()) walk(d.outlineRoot, 0);
+  return JSON.stringify({pages: pages, outline: outline});
+}
+"""
+
+
+def pdf_extract(path):
+    """{"pages": [text, ...], "outline": [[level, title, page], ...]} via macOS PDFKit."""
+    import subprocess
+    import tempfile
+    with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False) as js:
+        js.write(PDF_JS)
+    try:
+        out = subprocess.run(["osascript", "-l", "JavaScript", js.name, str(path.resolve())],
+                             capture_output=True, text=True, stdin=subprocess.DEVNULL)
+    except FileNotFoundError:
+        sys.exit("pdf-text needs macOS (osascript). Elsewhere, read the PDF and save its parts by hand.")
+    finally:
+        os.unlink(js.name)
+    data = json.loads(out.stdout or '{"error": "%s"}' % out.stderr.strip().replace('"', "'"))
+    if "error" in data:
+        sys.exit(f"pdf-text: {data['error']}")
+    return data
+
+
+def pdf_parts(npages, outline, size):
+    """Page ranges of at most `size` pages, cut at chapter starts where possible."""
+    starts = sorted({p for level, _, p in outline if level == 0 and p and p > 1})
+    parts, first = [], 1
+    while first <= npages:
+        last = min(first + size - 1, npages)
+        cut = [p - 1 for p in starts if first + size // 3 <= p - 1 < last]
+        last = cut[-1] if cut and last < npages else last
+        parts.append((first, last))
+        first = last + 1
+    return parts
+
+
+def cmd_pdf_text(wiki, args):
+    pdf = pathlib.Path(args.file).resolve()
+    data = pdf_extract(pdf)
+    pages, outline = data["pages"], data["outline"]
+    out = pdf.with_suffix("")
+    if out.exists() and any(out.iterdir()):
+        sys.exit(f"{wiki.rel(out)}/ already has files; raw files are never overwritten")
+    out.mkdir(parents=True, exist_ok=True)
+    ranges = pdf_parts(len(pages), outline, args.pages_per_part)
+    part_of = {}
+    for n, (first, last) in enumerate(ranges, 1):
+        lines = [f"# {pdf.name}, part {n} of {len(ranges)}: pages {first}-{last}", ""]
+        for p in range(first, last + 1):
+            part_of[p] = n
+            body = pages[p - 1].rstrip().splitlines()
+            if body and body[-1].strip() == str(p):  # the printed page number
+                body.pop()
+            lines += [f"<!-- p.{p} -->", *body, ""]
+        (out / f"part-{n:02d}.md").write_text("\n".join(lines), encoding="utf-8")
+    contents = [f"# {pdf.name}: contents", "",
+                f"From the PDF's bookmarks. {len(pages)} pages in {len(ranges)} parts.", ""]
+    contents += [f"{'  ' * level}- {title} p.{page} (part-{part_of.get(page, 0):02d})"
+                 for level, title, page in outline if page]
+    (out / "contents.md").write_text("\n".join(contents) + "\n", encoding="utf-8")
+    print(f"{len(pages)} pages -> {len(ranges)} parts and contents.md in {wiki.rel(out)}/")
+    if not outline:
+        print("No bookmarks: write the card's ## Contents from the headings in the parts.")
+    empty = [str(i + 1) for i, t in enumerate(pages) if not t.strip()]
+    if len(empty) > len(pages) // 10:
+        print(f"{len(empty)} pages have no text (scanned images?): read those pages from the PDF.")
 
 
 def cmd_note_reply(wiki, args):
@@ -648,7 +742,7 @@ def lint(wiki, today):
                 add("card fields to fill", f"{sid}: {key}")
     carded = {str(f.get("origin", "")) for _, f, _ in cards.values()}
     for raw in wiki.raw_files():
-        if wiki.rel(raw).replace("wiki/", "", 1) not in carded:
+        if wiki.origin(raw) not in carded:
             add("raw files without a card", wiki.rel(raw))
 
     for path in wiki.reports():
@@ -917,6 +1011,10 @@ def main():
     p = sub.add_parser("due", help="list sources due for a freshness recheck")
     p.add_argument("--today")
     p.set_defaults(fn=cmd_due)
+    p = sub.add_parser("pdf-text", help="save a PDF's text as page-marked parts plus contents.md (macOS)")
+    p.add_argument("file")
+    p.add_argument("--pages-per-part", type=int, default=40)
+    p.set_defaults(fn=cmd_pdf_text)
     p = sub.add_parser("raw-hits", help="raw lines matching terms that cards and pages don't mention")
     p.add_argument("terms", nargs="+")
     p.add_argument("--all", action="store_true", help="also show lines whose terms are summarized")

@@ -105,6 +105,19 @@ class WikiTools(unittest.TestCase):
         self.assertRegex(out, r"raw/2026-10-04-linked\.md  https://wiki\.example/pages/123")
         self.assertRegex(out, r"raw/2026-10-04-mentions\.md  \(no origin url\)")
 
+    def test_pdf_parts_share_the_pdf_card(self):
+        self.write("wiki/raw/2026-10-05-manual.pdf", "%PDF-1.4 binary")
+        self.write("wiki/raw/2026-10-05-manual/part-01.md", "# Manual\n<!-- p.1 -->\nText.\n")
+        self.write("wiki/raw/2026-10-05-manual/contents.md", "- Intro p.1 (part-01)\n")
+        out = self.run_wiki("cards-from-raw", "--dry-run")
+        self.assertIn("raw/2026-10-05-manual.pdf", out)
+        self.assertNotIn("manual/part-01", out)
+        self.assertNotIn("manual/contents", out)
+        sys.path.insert(0, str(TOOLS))
+        import wiki
+        outline = [[0, "One", 1], [0, "Two", 30], [0, "Three", 45]]
+        self.assertEqual(wiki.pdf_parts(100, outline, 40), [(1, 29), (30, 44), (45, 84), (85, 100)])
+
     def test_catalog_search_ties_newest_first(self):
         self.write("wiki/catalog/t.md", "# Catalog\n\n"
                    "- [ ] [Gizmo plan A](https://x.example/1) · id: 1 · modified: 2025-01-01\n"

@@ -14,6 +14,7 @@ only these scripts, the synthetic spec in `specs/`, and fictional fixtures.
 | `gen_fixture.py` | Synthetic scale fixture from a seeded spec (`specs/copperline.json`, a fictional studio-booking SaaS). Tiers S (~40 docs), M (300 + a 200-page manual), L (800 + a ~1,000-page manual). |
 | `validate_fixture.py` | Checks generated documents: known names and dates, gold only in its carriers, low word overlap between a planted fact and its question, no hint words. |
 | `drills.py` | Small drill packs: OrgForge SILENCE (absence), WikiContradict (conflicts), LLMail-Inject payloads, GOV.UK service assessments (critical review), HERB (stale versions, unanswerables; non-commercial). Checks each licence first and skips what it can't confirm. |
+| `pdf_pack.py` | Large-PDF retrieval pack from local PDF manuals: ingests them with `tools/wiki.py pdf-text`, has Opus write questions in several retrieval shapes from sampled pages (quotes checked on the named page), and batches them into cases with a judged answer item and a mechanical page-citation item per question. |
 | `probe.py` | Memorization probe: asks each gold question with no workspace and no tools (3 samples), judges the answers, and writes the result into the pack README. |
 | `check_connector.py` | Validates a fake-connector page folder and its search expectations (used for `samples/kestrel-connector/`). |
 

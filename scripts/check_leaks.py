@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Fail if any term from a private denylist appears in files git would publish.
 
-The denylist lives outside version control (default: .private/denylist.txt, one
-case-insensitive term per line, '#' comments). Without a denylist this check is a
-no-op, so it is safe to run anywhere. Use it to keep employer, customer or personal
-names out of a public fork.
+The denylist lives outside version control (default: .private/denylist.txt in the main
+checkout, also when run from a git worktree; one case-insensitive term per line, '#'
+comments). Without a denylist this check is a no-op, so it is safe to run anywhere. Use it
+to keep employer, customer or personal names out of a public fork.
 
 Usage: python3 scripts/check_leaks.py [--denylist PATH] [--history]
 """
@@ -20,6 +20,12 @@ def git(*args):
     return subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True, check=True).stdout
 
 
+def private_root():
+    """The main checkout's .private/, also from a git worktree."""
+    common = pathlib.Path(git("rev-parse", "--git-common-dir").strip())
+    return (common if common.is_absolute() else ROOT / common).resolve().parent / ".private"
+
+
 def load_terms(path):
     if not path.exists():
         return []
@@ -29,7 +35,7 @@ def load_terms(path):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--denylist", default=str(ROOT / ".private" / "denylist.txt"))
+    parser.add_argument("--denylist", default=str(private_root() / "denylist.txt"))
     parser.add_argument("--history", action="store_true", help="also scan commit messages")
     args = parser.parse_args()
 
