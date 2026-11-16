@@ -17,6 +17,10 @@ It has the same layout as `plugin/workspace/`:
   checklist and one past review lesson (the Usage Alerts PRD pair in `raw/` is
   there to try `review-feedback` backfill mode).
 - `work/2026-10-05-eu-data-residency/ask.md`: a live ask from the VP Product.
+- `design/`: Kestrel's Talon design system, the Insights overview screen, a reference
+  screenshot, two past corrections and the PM's mockup preferences. Try `ui-mockup`:
+  "Mock up a usage alerts panel on the Insights overview."
+
 
 The scenario's "today" is early October 2026. The helper scripts and viewer follow
 `PM_TODAY` when it is set, so pin it to keep source freshness consistent:

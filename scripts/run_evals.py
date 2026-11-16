@@ -35,7 +35,7 @@ STRONG_SKILLS = {"coverage-review", "critical-review", "prd", "pre-prd", "migrat
 ALLOWED = ["Read", "Write", "Edit", "Glob", "Grep", "Skill", "Task",
            "Bash(ls:*)", "Bash(grep:*)", "Bash(find:*)", "Bash(cat:*)", "Bash(head:*)",
            "Bash(wc:*)", "Bash(mkdir:*)", "Bash(cp:*)", "Bash(diff:*)", "Bash(date:*)",
-           "Bash(python3 tools/wiki.py:*)", "Bash(python3 .pm-toolkit/new/plugin/workspace/tools/wiki.py:*)",
+           "Bash(python3 tools/wiki.py:*)", "Bash(python3 tools/design.py:*)", "Bash(python3 .pm-toolkit/new/plugin/workspace/tools/wiki.py:*)",
            "Bash(python3 -I .pm-toolkit/new/plugin/workspace/tools/wiki.py:*)",
            "Bash(git:*)", "Bash(mv:*)"]
 CONNECTOR_TOOLS = ["mcp__docs__search", "mcp__docs__get_page", "mcp__docs__list_children",

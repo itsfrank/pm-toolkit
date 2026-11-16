@@ -97,3 +97,4 @@ mark.note-hl { background: var(--hl); color: inherit; cursor: pointer; border-ra
 .hits-head { font-size: 12px; color: var(--muted); margin: 4px 0; }
 .source-links { margin: 0 0 14px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); font-size: 14px; }
 .source-links.missing { color: var(--warn); }
+img.shot { max-width: 100%; border: 1px solid #ddd; border-radius: 4px; }

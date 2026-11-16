@@ -23,7 +23,8 @@ documents here.
   read-only.
 - Keep skills directive and short. Put rationale in `docs/`, not in skill text.
 - Shared conventions (citations, labels, trust levels, folders) are defined once in
-  `plugin/workspace/AGENTS.md` and `plugin/workspace/wiki/README.md`. Change them there
+  `plugin/workspace/AGENTS.md`, `plugin/workspace/wiki/README.md` and
+  `plugin/workspace/design/README.md`. Change them there
   and update the skills that depend on them.
 - Samples and evals use only fictional companies, people and products.
 - A skill behavior change should come with an eval case or an updated one in `evals/cases.json`.

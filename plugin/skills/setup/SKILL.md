@@ -45,6 +45,8 @@ skill's base directory). If you can't find it, ask the user where they unpacked 
    - Seed the review log: save past feedback (comment exports, post-mortems) and a few
      draft-and-final pairs of approved PRDs, then run `review-feedback` in backfill mode.
    - Pick a live ask and run `pre-prd`.
+   - If they make UI mockups: save a few screenshots of their product (PNG) and ask for a
+     mockup; `ui-mockup` learns the design system from them.
 
 ## Toolkit branch
 The `pm-toolkit` git branch holds each toolkit release exactly as shipped: skills under

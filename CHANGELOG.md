@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+Mockups:
+- New `ui-mockup` skill: mockups as one shareable HTML file that looks like your product.
+  It learns design systems and product screens from screenshots, Figma exports and saved
+  pages into `design/`, builds each mockup from that memory, and files your corrections
+  into the design system so they don't recur. Your presentation preferences are kept
+  separately and never override the system.
+- `tools/design.py`: exact colors from screenshots, style summaries of saved pages, palette
+  checks, single-file bundling, rendering for a visual self-check, and `design/INDEX.md`.
+- The viewer lists design systems, screens and mockups (**Mockups** in the top bar) and
+  opens mockups in a sandboxed tab; screenshots under `design/` show inline.
+- The Kestrel sample has a design system, a product screen and a reference screenshot;
+  three new eval cases cover mockups, feedback filing and learning a screen.
+
 ## 0.4.0 (2026-11-15)
 
 Large PDFs:

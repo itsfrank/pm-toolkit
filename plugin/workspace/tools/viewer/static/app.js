@@ -4,7 +4,7 @@
 
 const $ = (id) => document.getElementById(id);
 const state = { tree: [], path: "", text: "", sha: "", notes: [], cards: {}, pending: null };
-const ORDER = ["wiki", "INDEX.md", "pages", "reports", "sources", "work", "raw"];
+const ORDER = ["wiki", "INDEX.md", "pages", "reports", "sources", "work", "design", "mockups", "products", "systems", "raw", "refs"];
 
 function esc(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -48,6 +48,7 @@ function splitFront(text) {
 
 // ---------- inline markdown ----------
 function rawHref(path) { return "/api/raw?path=" + encodeURIComponent(path); }
+function designHref(path) { return "/api/design?path=" + encodeURIComponent(path); }
 // Links from a source card to its saved copy (in the viewer for markdown, else the file)
 // and to the original where it lives.
 function sourceLinks(fields) {
@@ -76,6 +77,7 @@ function safeHref(url) {
   const target = normalize((dirname(state.path) ? dirname(state.path) + "/" : "") + p);
   if (target.endsWith(".md")) return { href: "#/" + target + (frag ? "?h=" + encodeURIComponent(frag) : "") };
   if (target.startsWith("wiki/raw/")) return { href: rawHref(target), external: true };  // original file
+  if (target.startsWith("design/")) return { href: designHref(target), external: true };  // mockup or reference
   return { href: null, text: target };                     // other non-markdown file: show, don't link
 }
 
@@ -84,7 +86,12 @@ function inline(src) {
   const hold = (html) => "\u0000" + (slots.push(html) - 1) + "\u0000";
   let s = src.replace(/\u0000/g, "");
   s = s.replace(/(`+)([\s\S]*?[^`])\1(?!`)/g, (_, __, code) => hold("<code>" + esc(code.trim()) + "</code>"));
-  s = s.replace(/!\[([^\]]*)\]\(([^)\s]+)[^)]*\)/g, (_, alt) => hold('<span class="lbl">[image: ' + esc(alt) + "]</span>"));
+  s = s.replace(/!\[([^\]]*)\]\(([^)\s]+)[^)]*\)/g, (_, alt, url) => {
+    const h = safeHref(url);  // screenshots under design/ show inline; other images stay labels
+    if (h && h.href && h.href.startsWith("/api/design?") && /\.(png|jpe?g|gif)$/i.test(url))
+      return hold('<a href="' + esc(h.href) + '" target="_blank" rel="noopener noreferrer"><img class="shot" alt="' + esc(alt) + '" src="' + esc(h.href) + '"></a>');
+    return hold('<span class="lbl">[image: ' + esc(alt) + "]</span>");
+  });
   s = s.replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g, (_, label, url) => {
     const h = safeHref(url);
     if (!h) return hold(inline(label));

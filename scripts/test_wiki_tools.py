@@ -257,5 +257,52 @@ class WikiTools(unittest.TestCase):
         self.assertTrue(s["file"].endswith("sess-1.jsonl"))
 
 
+class DesignTools(unittest.TestCase):
+    """tools/design.py against the sample's design memory."""
+    setUp, tearDown, write = WikiTools.setUp, WikiTools.tearDown, WikiTools.write
+    TOKENS = "design/systems/talon/tokens.css"
+
+    def run_design(self, *args, ok=True):
+        out = subprocess.run([sys.executable, "tools/design.py", *args], cwd=self.ws,
+                             capture_output=True, text=True)
+        if ok:
+            self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
+        return out
+
+    def test_colors_measures_the_reference_exactly(self):
+        ref = "design/refs/2026-09-10-insights-overview.png"
+        out = self.run_design("colors", ref).stdout
+        for token in ("#16233b", "#f5f6f8", "#ffffff"):  # sidebar, canvas, cards
+            self.assertIn(token, out)
+        out = self.run_design("colors", ref, "--box", "0,0,15%,100%", "--top", "1").stdout
+        self.assertRegex(out, r"#16233b\s+9\d\.\d%")
+
+    def test_css_summarizes_tokens(self):
+        out = self.run_design("css", self.TOKENS).stdout
+        self.assertIn("--color-accent: #0e7c74", out)
+        self.assertIn("#0e7c74", out)
+
+    def test_check_flags_off_palette_colors_undefined_vars_and_network_loads(self):
+        screen = "design/products/kestrel-insights/screens/overview.html"
+        self.assertIn("0 problem(s)", self.run_design("check", screen, "--tokens", self.TOKENS).stdout)
+        bad = self.write("design/mockups/x/v1.html", '<link rel="stylesheet" href="https://cdn.example/a.css">'
+                         '<style>.a{color:#123456;margin:var(--nope)}</style>')
+        out = self.run_design("check", str(bad), "--tokens", self.TOKENS, ok=False).stdout
+        self.assertIn("color #123456 is not in the tokens", out)
+        self.assertIn("var(--nope)", out)
+        self.assertIn("external load", out)
+
+    def test_bundle_makes_one_standalone_file(self):
+        src = (self.ws / "design/products/kestrel-insights/screens/overview.html").read_text()
+        mock = self.write("design/mockups/2026-10-05-test/v1.html", src.replace("../../../systems", "../../systems"))
+        self.write("design/mockups/2026-10-05-test/notes.md", "---\ntitle: Test\nproduct: kestrel-insights\n---\n")
+        self.assertIn("0 problem(s)", self.run_design("bundle", str(mock)).stdout)
+        html = mock.read_text()
+        self.assertNotIn("<link", html)
+        self.assertIn("--color-table-header: #f0f2f5", html)
+        self.run_design("index")
+        self.assertIn("mockups/2026-10-05-test/v1.html", (self.ws / "design/INDEX.md").read_text())
+
+
 if __name__ == "__main__":
     unittest.main()

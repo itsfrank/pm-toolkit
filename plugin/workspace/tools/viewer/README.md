@@ -11,8 +11,9 @@ python3 tools/viewer/serve.py --open --port 8800
 python3 tools/viewer/serve.py --open --detach   # keep running in the background
 python3 tools/viewer/serve.py --stop            # stop this workspace's viewer
 ```
-It listens on 127.0.0.1 only, serves only `.md` files inside the workspace, and writes only
-one file: `wiki/notes.jsonl`. Stop it with Ctrl+C.
+It listens on 127.0.0.1 only, serves only `.md` files inside the workspace, saved originals
+from `wiki/raw/` and `design/`, and mockups from `design/` (in a sandbox with no network or
+viewer access; their local stylesheets are inlined when served). It writes only one file: `wiki/notes.jsonl`. Stop it with Ctrl+C.
 
 ## Use
 - The left panel lists files by folder, with a dot for page status (draft or reviewed).

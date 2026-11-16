@@ -34,6 +34,7 @@ be sure the toolkit handles it: `/wiki` alone shows what needs your attention, a
 | `customer-call` | Prep before and debrief after customer calls; files the evidence. |
 | `competitive` | Dated, scoped and sourced competitor claim cards and comparisons. |
 | `marketing-check` | Fact-check marketing and sales copy against what the product does. |
+| `ui-mockup` | Mockups as one shareable HTML file that looks like your real product. Learns the design system from screenshots and saved pages, and remembers your corrections. |
 | `report` | Research a question and write a cited, dated report you can read later. |
 | `wiki-ingest` / `wiki-lint` | Grow and maintain the wiki. |
 | `wiki-expand` | Bring in a whole area (an acquired company, another team's space): survey, ingest the best pages within a budget, catalog the rest. |
@@ -53,7 +54,8 @@ wiki/reports/    research you asked for (dated snapshots)
 wiki/notes.jsonl your notes from the viewer, processed by wiki-notes
 wiki/catalog/    one line per page of surveyed spaces, read or not
 work/<ask>/      ask → intake → landscape → coverage → prd → critical review
-tools/           wiki.py (IDs, cards, lint, freshness, notes) and the viewer
+design/          design systems, product screens and mockups (ui-mockup)
+tools/           wiki.py (IDs, cards, lint, freshness, notes), design.py and the viewer
 ```
 
 To read the wiki in a browser and leave notes on any line, say `/wiki open` (or run

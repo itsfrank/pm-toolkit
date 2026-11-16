@@ -16,6 +16,7 @@ browser, and `/wiki cheatsheet` shows this page.
 | got feedback, or were asked something you couldn't answer | "My reviewer said…" / "They asked me X and I didn't know." | A lesson the toolkit checks next time, and the wiki fixed |
 | finished a draft | "Review this like my toughest reviewer would." | A list of what a demanding reviewer would catch |
 | need customer-facing answers | "Answer this RFP / questionnaire / email." | Draft answers from approved sources only, with gaps marked |
+| need a mockup | "Mock up a usage panel on the Insights overview." Share screenshots or saved pages of the product the first time. | One HTML file you can share, styled like the real product. Corrections you give are remembered for next time |
 | have other work | "Prep me for my call with…", "Check this datasheet", "Compare us with…", "Gap analysis against…" | Call prep or debrief, a fact-check, a comparison, a gap table |
 
 ## Reading and notes
@@ -24,6 +25,8 @@ browser, and `/wiki cheatsheet` shows this page.
 - Select any text and click **Note** to leave a comment. Claude processes notes when you
   say "go through my notes", and tells you when there are open ones.
 - Click a citation like `[S-0012]` to see the source it came from.
+- **Mockups** in the top bar lists design systems, product screens and mockups; they open
+  in a new tab.
 
 ## Long jobs
 Big jobs (bringing in an area, a migration) stop gracefully when their budget runs low: you

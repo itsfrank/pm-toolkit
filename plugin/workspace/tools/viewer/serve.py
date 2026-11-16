@@ -23,6 +23,7 @@ import webbrowser
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 import wiki as wikitools  # noqa: E402  (tools/wiki.py, shared status logic)
+import design as designtools  # noqa: E402  (tools/design.py, inlines a page's stylesheets)
 STATIC = HERE / "static"
 TYPES = {".html": "text/html", ".js": "text/javascript", ".css": "text/css"}
 MAX_BODY = 64 * 1024
@@ -38,13 +39,18 @@ RAW_TYPES = {".pdf": "application/pdf", ".png": "image/png", ".jpg": "image/jpeg
              ".csv": "text/plain", ".json": "text/plain", ".html": "text/plain",
              ".htm": "text/plain", ".eml": "text/plain", ".xml": "text/plain"}
 RAW_CSP = "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox"
+# Mockups the agent wrote under design/ render as pages, sandboxed away from the viewer and
+# the network. Saved references (design/refs/) are originals: treated like wiki/raw/.
+DESIGN_PAGES = ("mockups", "products", "systems")
+DESIGN_CSP = ("default-src 'none'; img-src data:; style-src 'unsafe-inline'; font-src data:; "
+              "script-src 'unsafe-inline'; sandbox allow-scripts")
 
 
-def raw_file(path):
-    """Resolve a path to a file under wiki/raw/; None if it escapes that folder."""
+def raw_file(path, base=("wiki", "raw")):
+    """Resolve a path to a file under wiki/raw/ (or base); None if it escapes that folder."""
     try:
         p = (ROOT / path).resolve()
-        p.relative_to((ROOT / "wiki" / "raw").resolve())
+        p.relative_to(ROOT.joinpath(*base).resolve())
     except (OSError, ValueError):
         return None
     return p if p.is_file() else None
@@ -66,7 +72,7 @@ def inside(path):
 
 
 def md_files():
-    for top in ("wiki", "work"):
+    for top in ("wiki", "work", "design"):
         base = ROOT / top
         if not base.is_dir():
             continue
@@ -185,6 +191,15 @@ class Handler(http.server.BaseHTTPRequestHandler):
             csp = "default-src 'none'" if ctype == "application/pdf" else RAW_CSP
             return self.send(200, p.read_bytes(), ctype, csp=csp,
                              download=None if p.suffix.lower() in RAW_TYPES else name)
+        if url.path == "/api/design":
+            p = raw_file(arg("path"), ("design",))
+            if not p:
+                return self.send(404, {"error": "not found"})
+            page = p.suffix.lower() in (".html", ".htm") and \
+                p.relative_to((ROOT / "design").resolve()).parts[0] in DESIGN_PAGES
+            if page:
+                return self.send(200, designtools.bundled(p).encode("utf-8"), "text/html", csp=DESIGN_CSP)
+            return self.send(200, p.read_bytes(), RAW_TYPES.get(p.suffix.lower(), "text/plain"), csp=RAW_CSP)
         if url.path == "/api/whoami":
             return self.send(200, {"app": "pm-wiki-viewer", "root": str(ROOT), "pid": os.getpid()})
         if url.path == "/api/status":

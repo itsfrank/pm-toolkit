@@ -20,13 +20,14 @@ REQUIRED_WORKSPACE = [
     "wiki/README.md", "wiki/INDEX.md", "wiki/glossary.md", "wiki/lenses.md",
     "wiki/review-log.md", "wiki/sources/_TEMPLATE.md", "wiki/pages/_TEMPLATE.md",
     "wiki/reports/INDEX.md", "wiki/pages/people", "wiki/CHEATSHEET.md", "wiki/catalog/README.md", "wiki/watch.md",
-    "tools/prices.json", "tools/wiki.py", "tools/viewer/serve.py",
+    "tools/prices.json", "tools/wiki.py", "tools/viewer/serve.py", "tools/design.py",
+    "design/README.md", "design/INDEX.md", "design/preferences.md",
     "tools/viewer/README.md",
 ]
 SAMPLES = ROOT / "samples"
 # Convention files every sample workspace keeps identical to the template.
 SHARED = ["wiki/README.md", "wiki/sources/_TEMPLATE.md", "wiki/pages/_TEMPLATE.md",
-          "wiki/CHEATSHEET.md", "wiki/catalog/README.md"]
+          "wiki/CHEATSHEET.md", "wiki/catalog/README.md", "design/README.md"]
 EXTERNAL = re.compile(r"""(?:src|href)\s*=\s*["']\s*(?:https?:)?//|@import\s+url\(\s*["']?(?:https?:)?//"""
                       r"""|\bimport\b[^;\n]*["'](?:https?:)?//|fetch\(\s*["'](?:https?:)?//""", re.I)
 LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")

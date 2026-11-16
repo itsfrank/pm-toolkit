@@ -48,6 +48,7 @@ PM can redirect.
 | a customer call, before or after | `customer-call` |
 | competitors | `competitive` |
 | marketing or sales copy | `marketing-check` |
+| a mockup or screen of a feature, UI screenshots to learn from, feedback on a mockup | `ui-mockup` |
 | research, a comparison, a summary or a report to read later | `report` |
 | saving a document, notes or a fact | `wiki-ingest` |
 | their notes from the viewer | `wiki-notes` |

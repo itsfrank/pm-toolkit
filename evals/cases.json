@@ -255,6 +255,43 @@
       "files": [
         "connector:46000"
       ]
+    },
+    {
+      "id": "DF1",
+      "text": "Talon system correction 2026-09-14: status is a colored dot with sentence-case text (.status), never a filled or uppercase pill.",
+      "files": [
+        "design/systems/talon/SYSTEM.md"
+      ]
+    },
+    {
+      "id": "DF2",
+      "text": "Talon system correction 2026-09-28: table headers are sentence case on a light grey band (--color-table-header #f0f2f5), never uppercase.",
+      "files": [
+        "design/systems/talon/SYSTEM.md",
+        "design/systems/talon/tokens.css"
+      ]
+    },
+    {
+      "id": "DF3",
+      "text": "Insights shell: sidebar Overview, Dashboards, Funnels, Retention, Data, Settings; brand 'Kestrel'; date range selector left of the one primary button in the header.",
+      "files": [
+        "design/products/kestrel-insights/PRODUCT.md",
+        "design/products/kestrel-insights/screens/overview.html"
+      ]
+    },
+    {
+      "id": "DF4",
+      "text": "PM preference (confirmed twice): a one-line caption strip above the product frame saying what is new.",
+      "files": [
+        "design/preferences.md"
+      ]
+    },
+    {
+      "id": "DF5",
+      "text": "Usage Alerts v1.0: alerts on Insights v2 charts with metric, threshold and window; email and webhook; mute, edit, delete; Admins and Editors create, Viewers subscribe; Team plan 25 alerts per workspace.",
+      "files": [
+        "wiki/raw/2026-07-08-usage-alerts-prd-v1.0-approved.md"
+      ]
     }
   ],
   "cases": [
@@ -2781,6 +2818,199 @@
         }
       ],
       "notes": "Grade the prd skill, the changed files and the reply. The workspace predates the pm-toolkit branch; the old release is available, so the baseline can be rebuilt exactly."
+    },
+    {
+      "id": "ui-mockup-alerts-panel",
+      "skill": "ui-mockup",
+      "core": false,
+      "kind": "capability",
+      "prompt": "Make me a mockup of a usage alerts panel on the Insights overview dashboard. Work non-interactively: don't stop to ask; put assumptions in the notes.",
+      "fixtures": [],
+      "output_file": "design/mockups/v1.html",
+      "must_find": [
+        {
+          "id": "UM1",
+          "critical": true,
+          "check": {
+            "regex": "(?s)Dashboards.*Funnels.*Retention.*Data.*Settings"
+          },
+          "fact": "DF3",
+          "text": "Keeps the Insights shell: sidebar items in order."
+        },
+        {
+          "id": "UM2",
+          "critical": true,
+          "check": {
+            "regex": "--color-table-header:\\s*#f0f2f5"
+          },
+          "fact": "DF2",
+          "text": "Uses the Talon tokens (inlined, so the file stands alone)."
+        },
+        {
+          "id": "UM3",
+          "critical": true,
+          "fact": "DF1",
+          "text": "Alert states are shown with the .status dot and sentence-case text, not filled or uppercase pills."
+        },
+        {
+          "id": "UM4",
+          "critical": false,
+          "fact": "DF5",
+          "text": "The panel reflects the approved Usage Alerts PRD: threshold and window, email or webhook, and mute/edit actions."
+        },
+        {
+          "id": "UM5",
+          "critical": false,
+          "fact": "DF4",
+          "text": "Has a one-line caption strip above the product frame saying what is new."
+        },
+        {
+          "id": "UM6",
+          "critical": true,
+          "text": "The mockup is one self-contained HTML file: no <link> to local stylesheets, no network loads."
+        }
+      ],
+      "must_not": [
+        {
+          "id": "UMN1",
+          "text": "Loads fonts, scripts, styles or images from the network."
+        },
+        {
+          "id": "UMN2",
+          "text": "Uses colors not in the Talon tokens for existing elements, or changes the sidebar, header or breadcrumbs of the screen."
+        },
+        {
+          "id": "UMN3",
+          "text": "Puts roadmap dates or commitments into the mockup."
+        },
+        {
+          "id": "NX-invent",
+          "text": "Invents a quote, metric, owner, date or approval not in the sources."
+        }
+      ],
+      "notes": "Grade the newest design/mockups/*/v1.html and its notes.md in changed files. The memory in samples/kestrel/design holds the system, the screen, two corrections and a preference."
+    },
+    {
+      "id": "ui-mockup-feedback-filing",
+      "skill": "ui-mockup",
+      "core": false,
+      "kind": "capability",
+      "prompt": "Feedback on design/mockups/2026-10-01-usage-alerts-panel/v1.html: in Talon our tables never use a colored header band, it's always the light grey one, fix that everywhere. Primary buttons are never full width in our products. Drop the Export column from this one. And as usual, I like the empty state shown next to the filled one. Make v2. Work non-interactively.",
+      "fixtures": [
+        {
+          "from": "evals/fixtures/design/usage-alerts-v1.html",
+          "to": "design/mockups/2026-10-01-usage-alerts-panel/v1.html"
+        },
+        {
+          "from": "evals/fixtures/design/usage-alerts-notes.md",
+          "to": "design/mockups/2026-10-01-usage-alerts-panel/notes.md"
+        }
+      ],
+      "output_file": "design/mockups/2026-10-01-usage-alerts-panel/v2.html",
+      "must_find": [
+        {
+          "id": "UF1",
+          "critical": true,
+          "text": "Talon SYSTEM.md gets dated Corrections lines (PM correction) for the table header band and for primary buttons never being full width."
+        },
+        {
+          "id": "UF2",
+          "critical": true,
+          "text": "The empty-state preference moves from Candidates to the main list of design/preferences.md (second time seen), and is not written into the system files."
+        },
+        {
+          "id": "UF3",
+          "critical": true,
+          "text": "v2 has no Export column, a grey table header, and a primary button that is not full width; v1 is left unchanged."
+        },
+        {
+          "id": "UF4",
+          "critical": false,
+          "text": "Dropping the Export column is treated as mockup-only: not filed into system or product memory."
+        },
+        {
+          "id": "UF5",
+          "critical": false,
+          "text": "notes.md records the feedback under v1 or v2 and what was filed; the reply lists each memory update in one line."
+        }
+      ],
+      "must_not": [
+        {
+          "id": "UFN1",
+          "text": "Stops to ask the PM whether to update the design system."
+        },
+        {
+          "id": "UFN2",
+          "text": "Edits v1.html or files in design/refs/."
+        },
+        {
+          "id": "UFN3",
+          "text": "Writes the Export-column change or the empty-state preference into tokens.css, components.css or SYSTEM.md."
+        }
+      ],
+      "notes": "Grade v2.html plus changed files (SYSTEM.md, preferences.md, notes.md)."
+    },
+    {
+      "id": "ui-mockup-learn-collect",
+      "skill": "ui-mockup",
+      "core": false,
+      "kind": "capability",
+      "prompt": "Here's a screenshot of the Kestrel Collect Sources page: design/refs/2026-10-04-collect-sources.png. Learn it so you can mock up Collect screens later. Work non-interactively.",
+      "fixtures": [
+        {
+          "from": "evals/fixtures/design/collect-sources.png",
+          "to": "design/refs/2026-10-04-collect-sources.png"
+        }
+      ],
+      "output_file": "design/products/kestrel-collect/PRODUCT.md",
+      "must_find": [
+        {
+          "id": "UL1",
+          "critical": true,
+          "check": {
+            "regex": "system:\\s*talon"
+          },
+          "text": "Recognizes the product uses the existing Talon system instead of creating a new one."
+        },
+        {
+          "id": "UL2",
+          "critical": true,
+          "check": {
+            "regex": "(?s)Sources.*Pipelines.*Spool.*Schemas.*Settings"
+          },
+          "text": "Records the Collect sidebar in order."
+        },
+        {
+          "id": "UL3",
+          "critical": true,
+          "text": "Writes a screens/*.html reconstruction of the Sources page that links the Talon stylesheets and uses placeholder data."
+        },
+        {
+          "id": "UL4",
+          "critical": false,
+          "text": "Records new parts (the amber-edged warning banner, Paused status, Throughput column) in the product or as a proposed component, measured with tools/design.py rather than guessed."
+        },
+        {
+          "id": "UL5",
+          "critical": false,
+          "text": "Lists the screenshot under ## References with what it shows and its date."
+        }
+      ],
+      "must_not": [
+        {
+          "id": "ULN1",
+          "text": "Creates a second design system for Collect or changes Talon token values that the screenshot doesn't contradict."
+        },
+        {
+          "id": "ULN2",
+          "text": "Moves, edits or deletes the screenshot in design/refs/."
+        },
+        {
+          "id": "NX-invent",
+          "text": "Invents a quote, metric, owner, date or approval not in the sources."
+        }
+      ],
+      "notes": "The screenshot is rendered from Talon, so measured colors match existing tokens exactly."
     }
   ]
 }

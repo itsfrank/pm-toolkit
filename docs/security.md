@@ -3,7 +3,7 @@
 ## For your security reviewer
 
 `pm-toolkit` is Markdown instructions for a coding agent (Claude Code), a folder template,
-a helper script (`tools/wiki.py`) and a local viewer (`tools/viewer/`). The scripts use only
+helper scripts (`tools/wiki.py`, `tools/design.py`) and a local viewer (`tools/viewer/`). The scripts use only
 the Python standard library and plain browser JavaScript. Nothing is installed from the
 network; there are no hooks, background jobs, MCP servers or connectors of its own.
 
@@ -12,9 +12,9 @@ network; there are no hooks, background jobs, MCP servers or connectors of its o
 | **Reads** | documents the PM saves; the workspace's own files | the workspace folder |
 | | Claude Code's session logs, for `wiki.py spend` only (optional) | `~/.claude/projects/` |
 | | connectors the PM already has, if any, read-only by rule | as configured by the PM |
-| **Writes** | wiki pages, source cards, reports, work folders, `notes.jsonl` | the workspace folder only |
+| **Writes** | wiki pages, source cards, reports, work folders, design memory and mockups, `notes.jsonl` | the workspace folder only |
 | **Never sends** | no email, posts, uploads, tickets or comments (a rule; see below); outputs are drafts the PM copies out | |
-| **Network** | the viewer listens on 127.0.0.1 only; the scripts make no network calls | |
+| **Network** | the viewer listens on 127.0.0.1 only; the scripts make no network calls (`design.py render` runs a local headless browser on a local file, if one is installed) | |
 
 What does leave the machine: everything the agent reads or writes goes to the model
 provider as part of the conversation, and connector search queries go to that connector.

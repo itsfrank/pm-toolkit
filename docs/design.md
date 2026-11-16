@@ -86,6 +86,35 @@ is offered by the agent at the start of a session instead of being something the
 remember. Skills stay separate behind the router because each run then loads only the text
 it needs, and each skill can be evaluated on its own.
 
+## Mockups that look like the product
+Models don't remember what a particular organization's products look like, so a PM asking
+for a mockup re-pastes the same screenshots every time and still spends several rounds on
+colors, spacing and labels. `design/` is the memory that removes those rounds, and it is
+kept as code, not prose: `tokens.css` holds every value, `components.css` builds components
+only from tokens, and each known screen is a faithful HTML reconstruction. A new mockup
+copies a screen and adds to it, so the shell, palette and vocabulary are right on the first
+try, and `tools/design.py check` catches values that drift from the palette.
+
+Values are measured, not guessed. Models read colors off images poorly, so `design.py
+colors` decodes the screenshot (PNG in the standard library; other formats through macOS
+`sips`, converting Display P3 to sRGB) and reports exact colors per region; `css` summarizes
+a saved page's styles without reading megabytes of CSS into context. `render` takes a
+screenshot of the mockup (headless Chrome or Edge, or Quick Look on macOS) so the agent
+compares it with the reference before the PM sees it.
+
+Corrections teach the system, not just the mockup. Feedback is sorted into the design
+system, the product, this mockup, or the PM's own preferences. The first two update memory
+at once, without asking, with a dated `## Corrections` line, because those are the
+mistakes that otherwise come back. Preferences are weaker: one remark is a candidate, a
+second makes it a rule, and they never override the system ("What wins" in
+`design/README.md`), so the memory stays a description of the real products rather than
+of one person's taste.
+
+Each mockup is a single HTML file with its styles and images inlined, because PMs share
+mockups in chat and email where linked files break. The file loads nothing from the
+network. The viewer lists mockups and opens them in a sandbox with no network or viewer
+access; saved product pages in `design/refs/` are shown as text, never run.
+
 ## Freshness
 Sources pulled from a live system (a Confluence page, a ticket) go stale silently. A global
 age rule ("re-check anything older than two days") fires on every source forever and costs

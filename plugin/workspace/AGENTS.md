@@ -21,6 +21,8 @@ with the pm-toolkit skills. Follow these rules for every task.
 - `wiki/lenses.md`: the coverage checklist used by `coverage-review`.
 - `wiki/review-log.md`: things reviewers caught that we missed. It feeds `lenses.md`.
 - `work/YYYY-MM-DD-slug/`: one folder per ask (intake, landscape, coverage, PRD, reviews).
+- `design/`: what the products look like (design systems, product screens, references) and
+  the mockups made from them. Conventions in `design/README.md`; maintained by `ui-mockup`.
 - `tools/`: helper scripts (Python standard library). `python3 tools/wiki.py --help` lists
   the commands; `python3 tools/viewer/serve.py` starts the PM's local viewer. Use the
   scripts for mechanical work (IDs, indexes, checks) instead of doing it by hand.
@@ -82,6 +84,8 @@ with the pm-toolkit skills. Follow these rules for every task.
   skill name.
 - After a task that taught us something durable (a new product fact, owner, initiative or
   acronym), offer to file it with `wiki-ingest`.
+- When the PM corrects how a product or its design system looks, in any task, update
+  `design/` as `ui-mockup` Feedback says, and say what was filed.
 - When the PM shares reviewer feedback, or mentions a question they couldn't answer, use
   `review-feedback` to log it. Offer this unprompted after meetings and reviews.
 - Cost: use the default model for reading, filing and mapping. For `coverage-review`,
@@ -97,7 +101,7 @@ The PM may ask you to improve skills, rules, templates or tools. Upgrades keep t
   this file, `wiki/lenses.md`, templates under `wiki/pages/topics/`. Edit a skill when the
   change is about how the skill works.
 - After changing toolkit instructions or code (`.claude/skills/`, `tools/`, this file outside
-  `## Local rules`, `wiki/README.md`, `_TEMPLATE.md` files), add an entry to
+  `## Local rules`, `wiki/README.md`, `design/README.md`, `_TEMPLATE.md` files), add an entry to
   `LOCAL-CHANGES.md` and commit both. Wiki content, `lenses.md` and local rules need none:
   ```
   ## 2026-11-20 prd: rollout section lists review gates
