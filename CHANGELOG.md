@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 (2026-11-15)
 
 Upgrades keep your changes:
 - The workspace's `pm-toolkit` git branch holds each release as shipped; `setup` upgrades by
