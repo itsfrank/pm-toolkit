@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.0 (2026-11-15)
 
 Mockups:
 - New `ui-mockup` skill: mockups as one shareable HTML file that looks like your product.
