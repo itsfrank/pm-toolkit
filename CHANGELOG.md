@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.4.0 (2026-11-15)
+
+Large PDFs:
+- `tools/wiki.py pdf-text FILE.pdf` (macOS, nothing to install) saves a PDF's text as
+  `raw/<name>/part-NN.md` with `<!-- p.N -->` page markers, cut at chapter starts, plus
+  `contents.md` from the PDF's bookmarks for the card's Contents. Elsewhere, the agent
+  still reads the PDF and writes the parts.
+- A PDF's text parts share the PDF's card: `cards-from-raw` and `lint` no longer ask for a
+  card per part, and `raw-hits` shows parts under the PDF's card.
+
+Maintainers:
+- `scripts/datasets/pdf_pack.py` builds a local retrieval eval pack from PDF manuals, with
+  generated questions whose quotes are checked on their pages.
+- `scripts/check_leaks.py` finds the denylist when run from a git worktree.
+
 ## 0.3.0 (2026-11-15)
 
 Upgrades keep your changes:
