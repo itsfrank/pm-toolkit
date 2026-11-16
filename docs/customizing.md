@@ -33,7 +33,17 @@ of detail, which sections are mandatory, and recurring questions. `critical-revi
 
 ## 6. Edit skills
 Skills are plain markdown in `.claude/skills/` (copy mode); helper scripts are in `tools/`. Change steps, templates or tone
-directly. Keep the evidence rules; most of the toolkit's value depends on them.
+directly, or ask the agent to. Keep the evidence rules; most of the toolkit's value depends on them.
+
+Your changes survive upgrades. The workspace's `pm-toolkit` git branch holds each release
+exactly as shipped, and an upgrade merges the new release from it into your branch, so git
+can tell your changes from the toolkit's. The agent records why it changed a skill or rule
+in `LOCAL-CHANGES.md`; when a new release rewrote the same text, the upgrade re-applies that
+intent to the new version. Plugin mode can't keep skill edits: use copy mode if you will
+change skills.
+
+To suggest an improvement upstream, ask the agent for a note on your `general` changes. It
+drafts one without internal details; read it before you send it.
 
 ## Other domains
 Nothing in the skills assumes an industry. For a regulated domain, add the regime to lens 9

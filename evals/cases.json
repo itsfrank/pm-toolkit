@@ -2601,6 +2601,186 @@
       ],
       "notes": "D-2026-19's body avoids the obvious query words; the path is search 'backup' -> Infrastructure decision log (42011) or the storage FAQ (42015) -> list_children. Control arm: C3 of coverage-eu-residency applies unchanged (backup location unknown, ask Infrastructure).",
       "kind": "capability"
+    },
+    {
+      "id": "upgrade-both-edited",
+      "skill": "setup",
+      "core": false,
+      "kind": "capability",
+      "prompt": "Upgrade my pm-toolkit workspace to the new release unzipped at .pm-toolkit/new/ (follow its plugin/skills/setup/SKILL.md, Upgrade). Run unattended: don't stop to ask me; put anything I should check in your final reply.",
+      "permission_mode": "bypassPermissions",
+      "prep": [
+        "evals/fixtures/upgrade/prep.py",
+        "both-edited"
+      ],
+      "output_file": ".claude/skills/prd/SKILL.md",
+      "must_find": [
+        {
+          "id": "UP1",
+          "critical": true,
+          "text": "The PM's uncommitted edit to the intake skill ('Keep it to one page.') is committed as a pre-upgrade snapshot before the merge and is still in place afterwards."
+        },
+        {
+          "id": "UP2",
+          "critical": true,
+          "text": "The prd skill's Rollout line keeps both intents: the PM's launch review gates with who signs off each (from LOCAL-CHANGES.md) and the release's exit criteria for each phase."
+        },
+        {
+          "id": "UP3",
+          "critical": true,
+          "text": "The release's non-conflicting prd change (body under six pages) is present in the prd skill.",
+          "check": {
+            "contains": "Keep the body under six pages"
+          }
+        },
+        {
+          "id": "UP4",
+          "critical": true,
+          "text": "The upgrade runs toolkit-branch on the new release and merges the pm-toolkit branch into main (visible in the reply or changes)."
+        },
+        {
+          "id": "UP5",
+          "critical": false,
+          "text": ".pm-toolkit-version names the new version, and the reply reports the conflict in the prd skill and how it was resolved."
+        }
+      ],
+      "must_not": [
+        {
+          "id": "UPN1",
+          "text": "Stops to ask the user or ends without finishing the upgrade."
+        },
+        {
+          "id": "UPN2",
+          "text": "Copies the new release over the workspace instead of merging it from the pm-toolkit branch, or commits the PM's own changes or wiki content to the pm-toolkit branch."
+        },
+        {
+          "id": "UPN3",
+          "text": "Changes wiki content (wiki/pages, wiki/sources, wiki/raw, reports) as part of the upgrade."
+        },
+        {
+          "id": "UPN4",
+          "text": "The intake edit is reverted ('Keep it to one page.' replaced by the old text).",
+          "check": {
+            "regex": "^-\\d\\. Write `intake\\.md` with the sections below\\. Keep it to one page"
+          }
+        }
+      ],
+      "notes": "Grade the final prd skill, the changed files (including .claude/skills) and the final reply. prep.py commits the PM's prd edit with a LOCAL-CHANGES.md entry, leaves the intake edit uncommitted, and makes the new release change the same prd line."
+    },
+    {
+      "id": "upgrade-local-files",
+      "skill": "setup",
+      "core": false,
+      "kind": "capability",
+      "prompt": "Upgrade my pm-toolkit workspace to the new release unzipped at .pm-toolkit/new/ (follow its plugin/skills/setup/SKILL.md, Upgrade). Run unattended: don't stop to ask me; put anything I should check in your final reply.",
+      "permission_mode": "bypassPermissions",
+      "prep": [
+        "evals/fixtures/upgrade/prep.py",
+        "local-files"
+      ],
+      "output_file": "wiki/lenses.md",
+      "must_find": [
+        {
+          "id": "UL1",
+          "critical": true,
+          "text": "lenses.md keeps the PM's [org-checklist] probe, the sample's support-tools probe [RL 2026-06-12], and gains the release's probe on logs and analytics.",
+          "check": {
+            "regex": "(?s)org-checklist.*logs or analytics|logs or analytics.*org-checklist"
+          }
+        },
+        {
+          "id": "UL2",
+          "critical": true,
+          "text": "The PM's own skill .claude/skills/standup-notes/ still exists and the new release-notes skill is installed.",
+          "check": {
+            "regex": "NEW \\.claude/skills/release-notes/SKILL\\.md"
+          }
+        },
+        {
+          "id": "UL3",
+          "critical": true,
+          "text": "The ## Local rules section of AGENTS.md is kept (no diff removes it)."
+        },
+        {
+          "id": "UL4",
+          "critical": false,
+          "text": "work/README.md is removed, as in the release."
+        }
+      ],
+      "must_not": [
+        {
+          "id": "UPN1",
+          "text": "Stops to ask the user or ends without finishing the upgrade."
+        },
+        {
+          "id": "UPN2",
+          "text": "Copies the new release over the workspace instead of merging it from the pm-toolkit branch, or commits the PM's own changes or wiki content to the pm-toolkit branch."
+        },
+        {
+          "id": "UPN3",
+          "text": "Changes wiki content (wiki/pages, wiki/sources, wiki/raw, reports) as part of the upgrade."
+        },
+        {
+          "id": "ULN1",
+          "text": "Deletes the standup-notes skill.",
+          "check": {
+            "regex": "### DELETED\\n(?:[^\\n]+\\n)*?[^\\n]*standup-notes"
+          }
+        }
+      ],
+      "notes": "Grade lenses.md, the changed files (including .claude/skills) and the reply. prep.py records the baseline, then commits the PM's lens probe, own skill and local rule; the release adds a lens probe and a skill and deletes work/README.md."
+    },
+    {
+      "id": "upgrade-no-branch",
+      "skill": "setup",
+      "core": false,
+      "kind": "capability",
+      "prompt": "Upgrade my pm-toolkit workspace to the new release unzipped at .pm-toolkit/new/ (follow its plugin/skills/setup/SKILL.md, Upgrade). The release I installed originally is still unzipped at .pm-toolkit/old/. Run unattended: don't stop to ask me; put anything I should check in your final reply.",
+      "permission_mode": "bypassPermissions",
+      "prep": [
+        "evals/fixtures/upgrade/prep.py",
+        "no-branch"
+      ],
+      "output_file": ".claude/skills/prd/SKILL.md",
+      "must_find": [
+        {
+          "id": "UB1",
+          "critical": true,
+          "text": "Before merging the new release, records the old release (.pm-toolkit/old/) as the pm-toolkit branch's baseline (toolkit-branch --baseline, or the reply says so in other words)."
+        },
+        {
+          "id": "UB2",
+          "critical": true,
+          "text": "The prd skill keeps the PM's 'decision needed and its deadline' rule and gains the release's exit criteria for each rollout phase.",
+          "check": {
+            "regex": "(?s)decision needed and its deadline.*exit criteria for each|exit criteria for each.*decision needed and its deadline"
+          }
+        },
+        {
+          "id": "UB3",
+          "critical": false,
+          "text": ".pm-toolkit-version names the new version."
+        }
+      ],
+      "must_not": [
+        {
+          "id": "UPN1",
+          "text": "Stops to ask the user or ends without finishing the upgrade."
+        },
+        {
+          "id": "UPN2",
+          "text": "Copies the new release over the workspace instead of merging it from the pm-toolkit branch, or commits the PM's own changes or wiki content to the pm-toolkit branch."
+        },
+        {
+          "id": "UPN3",
+          "text": "Changes wiki content (wiki/pages, wiki/sources, wiki/raw, reports) as part of the upgrade."
+        },
+        {
+          "id": "UBN1",
+          "text": "Shows the PM a file-by-file comparison to choose from, although the old release was available."
+        }
+      ],
+      "notes": "Grade the prd skill, the changed files and the reply. The workspace predates the pm-toolkit branch; the old release is available, so the baseline can be rebuilt exactly."
     }
   ]
 }

@@ -91,6 +91,11 @@ Count files per role in the log. Commit: "migration: phase 1 inventory".
      Tell the user in the report that `/wiki` still works and what `/wiki cheatsheet`
      shows.
 3. Commit: "migration: phase 2 toolkit files and instructions".
+4. Record the toolkit baseline on the migration branch (never on `main`):
+   `python3 $KIT/plugin/workspace/tools/wiki.py toolkit-branch $KIT --baseline`. This creates
+   the `pm-toolkit` branch that lets later upgrades keep the user's changes (`setup`,
+   "Toolkit branch"). If `$KIT` isn't available, skip this and log a `medium` question: the
+   first upgrade will set it up.
 
 ## Phase 3: sources into raw
 1. `git mv` each source into `wiki/raw/`. Name it `YYYY-MM-DD-short-title.ext`, using the
@@ -182,7 +187,8 @@ For each entity page:
    - questions by priority, `high` first, with a pointer to `MIGRATION-QUESTIONS.md`;
    - how to review: `git switch migration-YYYY-MM-DD`, open the viewer, read the report;
    - how to accept (`git switch main && git merge migration-YYYY-MM-DD`) or discard
-     (`git switch main && git branch -D migration-YYYY-MM-DD`);
+     (`git switch main && git branch -D migration-YYYY-MM-DD`, plus `pm-toolkit` if phase 2
+     created it);
    - next steps: answer the questions, run `wiki-notes` for open notes, `wiki-refresh` once
      a connector is available, `wiki-lint` monthly.
 5. Commit: "migration: phase 10 report". Don't merge the branch.

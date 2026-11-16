@@ -89,3 +89,25 @@ with the pm-toolkit skills. Follow these rules for every task.
 - Long or budgeted runs follow "Long runs and handoffs" in `wiki/README.md`: wind down at
   about 80% of the budget, never stop mid-edit, and leave a `HANDOFF.md` for the next agent.
 - Report what you did, which sources you read, and what remains unknown.
+
+## Changing the toolkit
+The PM may ask you to improve skills, rules, templates or tools. Upgrades keep these changes
+(`setup`, "Toolkit branch"), helped by a record of why each was made.
+- Put organization-specific rules where they belong first: `## Local rules` at the end of
+  this file, `wiki/lenses.md`, templates under `wiki/pages/topics/`. Edit a skill when the
+  change is about how the skill works.
+- After changing toolkit instructions or code (`.claude/skills/`, `tools/`, this file outside
+  `## Local rules`, `wiki/README.md`, `_TEMPLATE.md` files), add an entry to
+  `LOCAL-CHANGES.md` and commit both. Wiki content, `lenses.md` and local rules need none:
+  ```
+  ## 2026-11-20 prd: rollout section lists review gates
+  Files: .claude/skills/prd/SKILL.md
+  Intent: every PRD gets a rollout section naming the launch review gates.
+  Why: a reviewer asked for it on two PRDs in a row.
+  Scope: org-specific | general
+  ```
+  `general` means another PM at another company would want it too.
+- `LOCAL-CHANGES.md` stays on this machine. When the PM wants to suggest improvements to the
+  toolkit's maintainer, draft a separate note from the `general` entries, written so it
+  holds no names, products, customers, documents or other internal details, and let the PM
+  review it before they send it themselves.

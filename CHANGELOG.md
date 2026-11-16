@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+Upgrades keep your changes:
+- The workspace's `pm-toolkit` git branch holds each release as shipped; `setup` upgrades by
+  merging the new release from it, so your edits to skills, rules and tools are kept.
+  `tools/wiki.py toolkit-branch` maintains the branch. Workspaces installed earlier get the
+  branch on their first upgrade.
+- The agent records why it changed toolkit files in `LOCAL-CHANGES.md` and uses it to
+  resolve upgrade conflicts. On request it drafts a note on general improvements, without
+  internal details, for the PM to review and send to the maintainer.
+- Migration records the baseline on its review branch; setup now requires a git repository.
+
 ## 0.2.0 (2026-11-15)
 
 Evidence and safety rules (`AGENTS.md`; the upgrade shows the differences):

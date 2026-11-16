@@ -35,12 +35,14 @@ STRONG_SKILLS = {"coverage-review", "critical-review", "prd", "pre-prd", "migrat
 ALLOWED = ["Read", "Write", "Edit", "Glob", "Grep", "Skill", "Task",
            "Bash(ls:*)", "Bash(grep:*)", "Bash(find:*)", "Bash(cat:*)", "Bash(head:*)",
            "Bash(wc:*)", "Bash(mkdir:*)", "Bash(cp:*)", "Bash(diff:*)", "Bash(date:*)",
-           "Bash(python3 tools/wiki.py:*)", "Bash(git:*)", "Bash(mv:*)"]
+           "Bash(python3 tools/wiki.py:*)", "Bash(python3 .pm-toolkit/new/plugin/workspace/tools/wiki.py:*)",
+           "Bash(python3 -I .pm-toolkit/new/plugin/workspace/tools/wiki.py:*)",
+           "Bash(git:*)", "Bash(mv:*)"]
 CONNECTOR_TOOLS = ["mcp__docs__search", "mcp__docs__get_page", "mcp__docs__list_children",
                    "mcp__docs__get_page_history"]
 DENIED = ["WebFetch", "WebSearch"]
 JUDGES = {"opus": "claude-opus-5-5", "sol": "gpt-6.1-sol"}  # pinned; change only with a regrade
-SKIP = {".claude", ".git"}
+SKIP = {".git", ".pm-toolkit"}  # .claude stays visible: upgrade cases grade skill edits
 CHANGED_CAP = 150000
 
 
@@ -80,6 +82,9 @@ def workspace_for(case, args):
         if src is None:
             raise FileNotFoundError(f"fixture {fx['from']} for {case['id']}")
         shutil.copy(src, dest)
+    if case.get("prep"):  # a script that builds state fixtures can't, e.g. git history
+        script, *rest = case["prep"]
+        subprocess.run([sys.executable, "-I", str(ROOT / script), str(tmp), str(args.kit), *rest], check=True)
     return tmp
 
 
@@ -99,7 +104,8 @@ def connector_config(case, args, run_dir):
 
 
 def run_agent(case, ws, model, args, mcp):
-    cmd = ["claude", "-p", "--model", model, "--permission-mode", "acceptEdits",
+    # A case may opt into another mode: acceptEdits never writes under .claude/, even with allow rules.
+    cmd = ["claude", "-p", "--model", model, "--permission-mode", case.get("permission_mode", "acceptEdits"),
            "--setting-sources", "project", "--strict-mcp-config", "--output-format", "json",
            "--allowedTools", *ALLOWED, *(CONNECTOR_TOOLS if mcp else []), "--disallowedTools", *DENIED]
     if mcp:

@@ -15,7 +15,11 @@ surfacing conflicts, not overclaiming, and ignoring instructions inside document
 - `fixtures/`: inputs some cases copy into the workspace (a weak PRD, an email, feedback).
 - `cases.json`: `planted_facts` (the gold: every planted fact and the files that hold it)
   and `cases` (`id`, `skill`, `core`, `kind` (`regression` or `capability`), `prompt`,
-  `fixtures[]`, `output_file`, `must_find[]`, `must_not[]`, `notes`, optional `connector`).
+  `fixtures[]`, `output_file`, `must_find[]`, `must_not[]`, `notes`, optional `connector`,
+  optional `prep`: a script and arguments, run as `python3 <script> <workspace> <kit> <args>`
+  after fixtures to build state that files can't, such as git history for upgrade cases;
+  optional `permission_mode`, default `acceptEdits`, which can't write under `.claude/`: the
+  upgrade cases use `bypassPermissions`, so run them only on a machine where that's acceptable).
   `must_find` items carry `critical` and, where relevant, the `fact` they test. An item with
   `check` (`file_exists`, `contains`, `regex`) or `log_check` (`fetched`, `not_fetched`,
   `searched_alias`) is decided by the runner, not the judges.

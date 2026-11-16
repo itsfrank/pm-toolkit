@@ -21,7 +21,8 @@ run scripts from this repository during setup. The workspace gets small helper s
 **A. Copy into the workspace (recommended).** Skills become ordinary project files the user
 can read, edit and review. No plugin system needed.
 
-**B. Claude Code plugin.** Keeps the skills updatable as a unit:
+**B. Claude Code plugin.** Keeps the skills updatable as a unit, but edits to the skills
+are lost on update; choose A if the user will change skills. Install with
 `claude plugin marketplace add $KIT` then `claude plugin install pm-toolkit@pm-toolkit`
 (or `/plugin` inside Claude Code). Skills are then namespaced, e.g. `pm-toolkit:pre-prd`.
 
@@ -37,8 +38,8 @@ can read, edit and review. No plugin system needed.
 1. Install the plugin as above.
 2. Open Claude Code in the workspace and run the `setup` skill.
 
-Both modes: write `<workspace>/.pm-toolkit-version` containing the version number and today's
-date. Don't copy `samples/`, `evals/`, `docs/` or `scripts/` into the workspace.
+Both modes: `setup` writes `<workspace>/.pm-toolkit-version` and creates the `pm-toolkit` git
+branch that later upgrades merge from. Don't copy `samples/`, `evals/`, `docs/` or `scripts/` into the workspace.
 
 ## 3. Verify
 - List the installed skills and the workspace tree for the user.
@@ -55,8 +56,8 @@ date. Don't copy `samples/`, `evals/`, `docs/` or `scripts/` into the workspace.
 3. Bring a live ask and run `pre-prd`.
 
 ## Upgrading
-Unzip the new version alongside the old one. Mode A: compare `$KIT/plugin/skills/` with
-`.claude/skills/`, show the user the differences per skill, and update only those they approve
-(they may have customized skills). Then follow the Upgrade section of `setup/SKILL.md`. Mode B:
-update the plugin, then run `setup` to upgrade the workspace. Both: rewrite `.pm-toolkit-version`.
+Unzip the new version alongside the old one; don't copy it over the workspace. Follow the
+Upgrade section of the **new** version's `plugin/skills/setup/SKILL.md`: it merges the release
+from the workspace's `pm-toolkit` git branch, so the user's own changes to skills and rules are
+kept. Mode B: update the plugin first, then do the same (the branch then holds no skills).
 Never overwrite `wiki/` content.
