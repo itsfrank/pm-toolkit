@@ -55,7 +55,9 @@ the Trash removes it; run the command again if the workspace folder moves.
   title and trust level.
 - "Highlight uncited" marks facts in curated pages with no citation or label.
 - Select text and press **Note** to leave a note. Enter saves, Shift+Enter adds a line, Esc
-  cancels. The notes panel lists the page's notes and their status. Agents process them with
+  cancels. The notes panel lists the page's notes and their status. It starts closed: the
+  ✎ button in the top bar shows how many notes the page has and opens it, and so does
+  clicking a highlighted note. Agents process them with
   the `wiki-notes` skill.
 
 ## Notes schema

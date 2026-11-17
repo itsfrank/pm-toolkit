@@ -17,6 +17,7 @@ Working without an assistant:
 - macOS launcher: `serve.py --install-app` adds a "PM Wiki" app to `~/Applications`, so the
   wiki opens from Spotlight without a terminal. `setup` offers it. **Quit** in the top bar
   stops the viewer.
+- The notes panel starts closed; the ✎ button or a highlighted note opens it.
 - The viewer refuses requests from other sites: it answers only its own address and accepts
   writes only from its own page.
 - Three eval cases: a document saved in the viewer, Home page requests, the launcher offer.
