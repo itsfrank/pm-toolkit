@@ -15,8 +15,10 @@ skill's base directory). If you can't find it, ask the user where they unpacked 
    copied documents, an index, agent instructions), stop here and follow `../../MIGRATION.md`
    (relative to this skill's base directory) instead.
 2. Copy the template tree into the target **without overwriting existing files**, including
-   `tools/` (helper scripts and the viewer). For every file that already exists, list it and
-   leave it untouched. The workspace must be a git repository: if it isn't, `git init` and
+   `tools/` (helper scripts and the viewer) and `.claude/settings.json` (it sets the
+   workspace's default model). For every file that already
+   exists, list it and leave it untouched; if `.claude/settings.json` exists without a
+   `model` key, offer to add `"model": "sonnet"` and say why. The workspace must be a git repository: if it isn't, `git init` and
    tell the user why (every change can be reviewed and rolled back, and upgrades keep their
    own changes).
 3. If an `AGENTS.md` or `CLAUDE.md` already exists, don't replace it. Propose a short merge:
@@ -71,13 +73,15 @@ installed ones. Don't copy files over the workspace.
    plugin mode), then `git merge pm-toolkit` on the user's branch.
 4. Resolve conflicts. Read `LOCAL-CHANGES.md` for the intent of the user's changes: keep the
    toolkit's new version and re-apply that intent to it. When unsure, keep the user's
-   version and tell the user what the toolkit changed there. Remove `LOCAL-CHANGES.md`
+   version and tell the user what the toolkit changed there. In `.claude/settings.json`,
+   keep the user's keys and add the toolkit's. Remove `LOCAL-CHANGES.md`
    entries the new release already covers (say which).
 5. Write the new version and today's date to `.pm-toolkit-version`, commit, and report: what
    the release changed (its `CHANGELOG.md`), which of the user's changes were kept, merged
    or retired, and any conflict you resolved.
 
 ## Rules
-- Don't install anything, add connectors, or change Claude Code settings. The scripts in
+- Don't install anything, add connectors, or change Claude Code settings outside the
+  workspace's `.claude/settings.json`. The scripts in
   `tools/` use only the Python standard library.
 - Report every file created, skipped or merged.

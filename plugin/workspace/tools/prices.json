@@ -1,8 +1,8 @@
 {
-  "_note": "Optional. USD per million tokens, by model-name prefix, used only to price spend --session-id estimates. Budgets use spend --ledger, which needs no prices; with a missing price the estimate stays in tokens.",
+  "_note": "USD per million tokens, by model-name prefix; prices `spend --days` and `spend --session-id` estimates. Taken from the costs Claude Code reported on 2026-11-15 (cache_write is the one-hour rate); correct them if your plan differs. Budgets use `spend --ledger`, which needs no prices; with a price set to null the estimate stays in tokens.",
   "models": {
-    "claude-opus": {"input": null, "output": null, "cache_write": null, "cache_read": null},
-    "claude-sonnet": {"input": null, "output": null, "cache_write": null, "cache_read": null},
-    "claude-haiku": {"input": null, "output": null, "cache_write": null, "cache_read": null}
+    "claude-opus": {"input": 4.0, "output": 20.0, "cache_write": 8.0, "cache_read": 0.2},
+    "claude-sonnet": {"input": 2.0, "output": 10.0, "cache_write": 4.0, "cache_read": 0.1},
+    "claude-haiku": {"input": 0.1, "output": 0.5, "cache_write": 0.2, "cache_read": 0.005}
   }
 }

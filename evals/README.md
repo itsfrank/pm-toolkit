@@ -68,9 +68,10 @@ Changing `GRADER.md` or a judge model changes the numbers: re-grade saved runs w
 `regrade` before comparing with older results.
 
 ## Cost and when to run
-Each case is a full agent run over about 60 files, and coverage, critical-review and prd
-cases chain several skills and should use the strongest model. Expect a full suite to take
-a significant number of tokens. Run the `core: true` cases (intake, landscape, coverage,
+Each case is a full agent run over about 60 files. Cases run on `--model` (default
+`sonnet`, the workspace default) and every skill follows it; pass `--model opus` to
+compare. The summary's cost column is the regression test for cost: compare it with
+the previous run's. Expect a full suite to take a significant number of tokens. Run the `core: true` cases (intake, landscape, coverage,
 critical review, RFP, marketing check, review-log backfill, injection safety) on every model change or skill edit;
 run the full suite before a release. Run each case two or three times when judging a change:
 single runs are noisy. Use `--repeat 3` and compare intervals, not single verdicts.

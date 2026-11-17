@@ -31,7 +31,8 @@ import sys
 import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-STRONG_SKILLS = {"coverage-review", "critical-review", "prd", "pre-prd", "migration"}
+# Run on --strong-model. Every other case runs on --model, as a workspace session does.
+STRONG_SKILLS = {"migration"}
 ALLOWED = ["Read", "Write", "Edit", "Glob", "Grep", "Skill", "Task",
            "Bash(ls:*)", "Bash(grep:*)", "Bash(find:*)", "Bash(cat:*)", "Bash(head:*)",
            "Bash(wc:*)", "Bash(mkdir:*)", "Bash(cp:*)", "Bash(diff:*)", "Bash(date:*)",

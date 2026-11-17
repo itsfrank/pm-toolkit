@@ -48,8 +48,9 @@ in about an hour, which matters at companies where installing outside tools need
 approval. Documents stay on the PM's machine, and the agent never sends anything.
 Connectors are optional and used read-only; see [security](security.md).
 
-**7. Budget-aware.** Reading, filing and mapping run fine on a mid-tier model. Coverage,
-critical review and final PRD passes benefit from the strongest model, and the skills say so.
+**7. Budget-aware.** Sessions start on a mid-tier model and the PM chooses when to use the
+strongest one; skills follow the session's model.
+See [cost](cost.md) for the measurements.
 
 ## Why a wiki and not RAG
 For one PM's working set (hundreds of documents, not millions), a curated, cited,
@@ -139,7 +140,8 @@ dollars because `claude -p --output-format json` reports each run's `total_cost_
 per-model usage, subagents included; runs append those results to a ledger and
 `tools/wiki.py spend --ledger` sums it. Session logs are an unofficial format and
 undercount, so `spend --session-id` reads them only for mid-run estimates, priced from
-`tools/prices.json` if the PM filled it in. Prices are not written into skills because they
+`tools/prices.json`. `spend --days N` reads every recent session of the workspace the same
+way, to show where the money went. Prices are not written into skills because they
 change, and family-wide prices can't be exact.
 
 ## Graceful wind-down

@@ -6,7 +6,7 @@ description: Systematically find unknown unknowns and blind spots in an ask, pla
 # Coverage review
 
 Goal: replace "I hope I covered everything" with an explicit, honest map of what is covered,
-what isn't, and what to do about each gap. Use the strongest available model for this skill.
+what isn't, and what to do about each gap.
 
 Input: the work folder (`intake.md`, `landscape.md`, any draft) or a document the user names.
 Also read `wiki/lenses.md` and `wiki/review-log.md`.

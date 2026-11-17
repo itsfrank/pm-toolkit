@@ -99,7 +99,7 @@ toolkit and can be deleted.
 | `plugin/` | The toolkit: `skills/`, the `workspace/` template (with `tools/`), `MIGRATION.md`, plugin manifest |
 | `samples/` | Fictional example workspace (optional) |
 | `evals/` | Regression cases for the skills, run against `samples/` |
-| `docs/` | Design rationale, research, security, customization |
+| `docs/` | Design rationale, research, security, cost, customization |
 | `scripts/` | Maintainer checks (not needed to use the toolkit) |
 
 ## Customizing

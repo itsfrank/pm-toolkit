@@ -45,7 +45,16 @@ picks up where it left off.
 - After a meeting, paste your notes and say "save this".
 - After a review, paste the feedback. It's how the toolkit learns what your reviewers care
   about.
-- For big reviews and final PRDs, use the strongest model.
+
+## Cost
+- You pick the model. The workspace starts on the mid-size one (Sonnet), which is enough
+  for most work. For a session that needs the strongest model, start Claude with
+  `claude --model opus` or type `/model opus`; it costs two to three times as much. Nothing
+  switches to it on its own.
+- One task per conversation. Start a new one for a new task, and after a long break: say
+  "continue work/<folder>" and it picks up from the files. Coming back to a long
+  conversation makes Claude re-read all of it at full price.
+- "What did I spend this week?" shows where the money went, by model and by conversation.
 
 ## Safety
 - Nothing is sent anywhere. You copy drafts out yourself after reading them.

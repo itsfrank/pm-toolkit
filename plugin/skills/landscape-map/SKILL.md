@@ -15,7 +15,8 @@ Output: `work/<slug>/landscape.md` (or `work/YYYY-MM-DD-landscape-<topic>/landsc
 1. Build the term list: the topic, the intake search terms, glossary synonyms and aliases
    from page frontmatter.
 2. Search `wiki/INDEX.md`, `wiki/pages/`, `wiki/reports/`, `wiki/sources/` and `wiki/raw/`
-   for every term (grep is fine). For large wikis, split the search by area across subagents
+   for every term (`python3 tools/wiki.py find <terms...>` searches them all in one call;
+   grep is fine too). For large wikis, split the search by area across subagents
    and ask each for cited findings only.
    If read-only connectors are available (docs, tickets, code hosts), search them too for
    in-flight work: epics, design docs, repos and their owners. Save each document you rely

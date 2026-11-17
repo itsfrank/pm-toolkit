@@ -16,7 +16,8 @@ the result as a report if the PM wants to read it later.
    in the report, and continue; don't stop to ask unless the PM is waiting on you.
 2. Check `wiki/reports/INDEX.md` for an earlier report on the same question. If one exists,
    read it and build on it; refreshing means a new dated file that links to the old one.
-3. Gather evidence: `wiki/INDEX.md` and the matching pages, the source cards behind them, and
+3. Gather evidence (`python3 tools/wiki.py find <the question's terms>` lists matching
+   pages, cards and raw files): `wiki/INDEX.md` and the matching pages, the source cards behind them, and
    the raw files for decisive detail. If read-only connectors are available and the question
    is about current state (in-flight work, owners, status), search them too, and save
    anything you rely on into `wiki/raw/` with a card (`wiki-ingest` rules). Search the

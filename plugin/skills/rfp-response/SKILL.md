@@ -13,7 +13,7 @@ columns for pasting into the customer's spreadsheet.
 ## Steps
 1. Parse every question into a row, keeping the customer's numbering and wording exactly.
 2. For each question, search `wiki/pages/answers/` first (approved answers), then product
-   pages and source cards. Prefer sources with `external_ok: yes`. Before marking a question
+   pages and source cards (`python3 tools/wiki.py find` searches both). Prefer sources with `external_ok: yes`. Before marking a question
    `unknown`, run `python3 tools/wiki.py catalog-search` on its key terms: a catalogued page
    may answer it once fetched and carded.
 3. Draft the answer and assign a status:

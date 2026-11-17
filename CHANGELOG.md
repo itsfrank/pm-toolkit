@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+Cost:
+- Workspaces start on the mid-size model (`.claude/settings.json`); the PM picks a
+  different one per session and every skill follows the session's model. The skills no
+  longer tell the agent to use or suggest the strongest model. Measurements are in
+  `docs/cost.md`.
+- `tools/wiki.py spend --days N` ("what did I spend this week?") shows cost per model and
+  the costliest conversations with the skills they ran. `tools/prices.json` is filled in.
+- `tools/wiki.py find TERMS` searches pages, reports, cards and raw files in one call,
+  best matches first. Skills mention it as an option.
+- The cheatsheet has a "Cost" section.
+
+Maintainers:
+- Eval cases run on the workspace default; `--model` compares models.
+
 ## 0.5.0 (2026-11-15)
 
 Mockups:

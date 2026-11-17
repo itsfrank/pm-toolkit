@@ -7,10 +7,11 @@ Standard library only (Python 3.8+). Run from the workspace root or pass --root.
   python3 tools/wiki.py cards-from-raw [--dry-run] [FILE ...]
   python3 tools/wiki.py due [--today YYYY-MM-DD]
   python3 tools/wiki.py pdf-text FILE.pdf [--pages-per-part N]
+  python3 tools/wiki.py find TERM [TERM ...] [--limit N]
   python3 tools/wiki.py raw-hits TERM [TERM ...] [--all] [--files N]
   python3 tools/wiki.py catalog-search TERM [TERM ...] [--all] [--limit N]
   python3 tools/wiki.py catalog-mark ID_OR_URL S-NNNN
-  python3 tools/wiki.py spend [--ledger FILE] [--session-id ID [--since ISO_TIME]] [--json]
+  python3 tools/wiki.py spend [--days N] [--ledger FILE] [--session-id ID [--since ISO_TIME]] [--json]
   python3 tools/wiki.py notes [--all] [--json]
   python3 tools/wiki.py note-status ID STATUS --resolution TEXT [--by NAME]
   python3 tools/wiki.py note-reply ID TEXT
@@ -24,7 +25,7 @@ Read-only except: cards-from-raw writes new cards, pdf-text writes a PDF's text 
 note-status and note-reply append to notes.jsonl, reports-index rewrites wiki/reports/INDEX.md,
 catalog-mark edits one catalog line, lint --fix-index edits wiki/INDEX.md, toolkit-branch
 commits to the git branch `pm-toolkit` (and, with --baseline, records a merge on the current branch).
-spend --session-id reads one Claude Code session log under ~/.claude/projects/ (read-only).
+spend --session-id and --days read Claude Code session logs under ~/.claude/projects/ (read-only).
 """
 import argparse
 import datetime
@@ -350,46 +351,101 @@ def session_logs(session_id=None, session=None):
     return [main] + sorted((main.parent / main.stem / "subagents").glob("*.jsonl"))
 
 
-def log_spend(prices_path, session_id=None, session=None, since=None):
-    """Estimate from session logs: tokens per model since a time, each message counted once.
-    The log format is unofficial and undercounts, so this is for mid-run checks only.
-    Priced from prices.json if it is filled in; otherwise budget in tokens."""
-    usage = {}  # message id -> (model, usage); log lines repeat per content block
-    files = session_logs(session_id, session)
+USAGE_KEYS = ("input_tokens", "output_tokens", "cache_creation_input_tokens", "cache_read_input_tokens")
+
+
+def log_usage(files, since=None):
+    """Messages with token usage in session logs, each counted once: {id: (model, usage, record)}.
+    Also returns the skills the session invoked."""
+    usage, skills = {}, []
     for path in files:
         for line in read(path).splitlines():
             try:
                 e = json.loads(line)
             except ValueError:
                 continue
-            m = e.get("message")
+            m = e.get("message") if isinstance(e, dict) else None
             if not isinstance(m, dict) or not m.get("usage") or (since and e.get("timestamp", "") < since):
                 continue
-            usage[m.get("id") or e.get("uuid")] = (m.get("model", "unknown"), m["usage"])
-    keys = ("input_tokens", "output_tokens", "cache_creation_input_tokens", "cache_read_input_tokens")
-    price_keys = dict(zip(keys, ("input", "output", "cache_write", "cache_read")))
+            usage[m.get("id") or e.get("uuid")] = (m.get("model", "unknown"), m["usage"], e)
+            for block in m.get("content") if isinstance(m.get("content"), list) else []:
+                if block.get("type") == "tool_use" and block.get("name") == "Skill":
+                    name = str((block.get("input") or {}).get("skill", "")).split(":")[-1]
+                    if name and name not in skills:
+                        skills.append(name)
+    return usage, skills
+
+
+def price_models(usage, prices_path):
+    """Tokens per model, priced from prices.json where it has the model.
+    Returns (models, usd of the priced ones, names of the unpriced ones)."""
+    price_keys = dict(zip(USAGE_KEYS, ("input", "output", "cache_write", "cache_read")))
     prices = json.loads(read(prices_path)).get("models", {}) if prices_path.exists() else {}
     models = {}
-    for model, u in usage.values():
-        row = models.setdefault(model, dict.fromkeys(keys, 0))
-        for k in keys:
+    for model, u, _ in usage.values():
+        if model == "<synthetic>":
+            continue
+        row = models.setdefault(model, dict.fromkeys(USAGE_KEYS, 0))
+        for k in USAGE_KEYS:
             row[k] += u.get(k) or 0
-    total, priced = 0.0, True
+    total, unpriced = 0.0, []
     for model, row in models.items():
         rate = next((v for k, v in prices.items() if model.startswith(k)), None)
-        if rate and all(isinstance(rate.get(price_keys[k]), (int, float)) for k in keys):
-            row["usd"] = round(sum(row[k] * rate[price_keys[k]] for k in keys) / 1e6, 4)
+        if rate and all(isinstance(rate.get(price_keys[k]), (int, float)) for k in USAGE_KEYS):
+            row["usd"] = round(sum(row[k] * rate[price_keys[k]] for k in USAGE_KEYS) / 1e6, 4)
             total += row["usd"]
         else:
-            priced = False
+            unpriced.append(model)
+    return models, round(total, 2), unpriced
+
+
+def log_spend(prices_path, session_id=None, session=None, since=None):
+    """Estimate from session logs: tokens per model since a time, each message counted once.
+    The log format is unofficial and undercounts, so this is for mid-run checks only.
+    Priced from prices.json if it is filled in; otherwise budget in tokens."""
+    files = session_logs(session_id, session)
+    usage, _ = log_usage(files, since)
+    models, usd, unpriced = price_models(usage, prices_path)
+    usd = usd if models and not unpriced else None
     return {"source": "estimate", "file": str(files[0]), "subagent_logs": len(files) - 1, "since": since,
-            "messages": len(usage), "models": models, "usd": round(total, 2) if priced and models else None}
+            "messages": len(usage), "models": models, "usd": usd}
+
+
+def recent_spend(wiki, days, today, logs=None):
+    """Every Claude Code session of this workspace in the last N days: tokens per model, and per
+    session its size, largest context and the skills it ran. Shows where the money goes."""
+    base = pathlib.Path(os.environ.get("CLAUDE_CONFIG_DIR", pathlib.Path.home() / ".claude"))
+    folder = pathlib.Path(logs) if logs else base / "projects" / re.sub(r"[^A-Za-z0-9]", "-", str(wiki.root))
+    since = (today - datetime.timedelta(days=days - 1)).isoformat()
+    prices_path = wiki.root / "tools" / "prices.json"
+    everything, sessions = {}, []
+    for main in sorted(folder.glob("*.jsonl")):
+        files = [main] + sorted((main.parent / main.stem / "subagents").glob("*.jsonl"))
+        usage, skills = log_usage(files, since)
+        if not usage:
+            continue
+        everything.update(usage)
+        models, usd, _ = price_models(usage, prices_path)
+        tokens = {k: sum(row[k] for row in models.values()) for k in USAGE_KEYS}
+        sessions.append({
+            "session": main.stem, "day": min(e.get("timestamp", "") for _, _, e in usage.values())[:10],
+            "messages": len(usage), "skills": skills, "usd": usd, "tokens": tokens,
+            "models": sorted({m.replace("claude-", "") for m in models}),
+            "peak_context": max(sum(u.get(k) or 0 for k in USAGE_KEYS if k != "output_tokens")
+                                for _, u, _ in usage.values())})
+    models, usd, unpriced = price_models(everything, prices_path)
+    sessions.sort(key=lambda s: (s["usd"], s["tokens"]["output_tokens"]), reverse=True)
+    return {"source": "recent", "folder": str(folder), "days": days, "since": since, "messages": len(everything),
+            "models": models, "usd": usd, "unpriced": unpriced, "sessions": sessions}
 
 
 def cmd_spend(wiki, args):
-    if not (args.ledger or args.session_id or args.session):
-        sys.exit("spend needs --ledger FILE (exact) or --session-id ID (estimate); it never guesses a session")
+    if not (args.ledger or args.session_id or args.session or args.days):
+        sys.exit("spend needs --days N (this workspace's recent sessions), --ledger FILE (exact) "
+                 "or --session-id ID (estimate); it never guesses a session")
     parts = []
+    if args.days:
+        parts.append(recent_spend(wiki, args.days, today_arg(args.today), args.logs))
     if args.ledger:
         parts.append(ledger_spend(args.ledger))
     if args.session_id or args.session:
@@ -400,6 +456,9 @@ def cmd_spend(wiki, args):
     for s in parts:
         if s["source"] == "ledger":
             print(f"ledger {s['file']}: {s['runs']} run(s), ${s['usd']:.2f}")
+        elif s["source"] == "recent":
+            print(f"last {s['days']} day(s) (since {s['since']}): {len(s['sessions'])} session(s), "
+                  f"{s['messages']} messages, from {s['folder']}")
         else:
             print(f"estimate from session log {s['file']} (+{s['subagent_logs']} subagent logs), "
                   f"{s['messages']} messages" + (f" since {s['since']}" if s["since"] else ""))
@@ -407,10 +466,18 @@ def cmd_spend(wiki, args):
             cost = row.get("costUSD", row.get("usd"))
             tokens = ", ".join(f"{k} {v:,}" for k, v in row.items() if k.lower().endswith("tokens"))
             print(f"  {model}: {tokens}" + (f"  = ${cost:.2f}" if cost is not None else ""))
+        for row in s.get("sessions", [])[:args.top]:
+            t = row["tokens"]
+            print(f"  {row['day']} {row['session'][:8]}  ${row['usd']:.2f}  {row['messages']} msgs, "
+                  f"output {t['output_tokens']:,}, largest context "
+                  f"{row['peak_context']:,}  [{', '.join(row['models'])}]  {', '.join(row['skills']) or 'no skill'}")
     usd = [s["usd"] for s in parts]
-    estimate = any(s["source"] == "estimate" for s in parts)
+    estimate = any(s["source"] != "ledger" for s in parts)
+    unpriced = sorted({m for s in parts for m in s.get("unpriced", [])})
     if None in usd:
         print("total: unpriced estimate; budget in tokens (or fill in tools/prices.json)")
+    elif unpriced:
+        print(f"total: ${sum(usd):.2f} (estimate), not counting {', '.join(unpriced)}: no price in tools/prices.json")
     else:
         print(f"total: ${sum(usd):.2f}" + (" (estimate: session logs undercount)" if estimate else ""))
 
@@ -473,6 +540,72 @@ def raw_hits(wiki, terms, show_all=False, per_file=8):
             out.append((wiki.rel(raw), sid, sorted(hits[:per_file]), len(hits), len(found)))
     out.sort(key=lambda r: (-r[4], r[0]))
     return out, skipped
+
+
+def term_groups(wiki, terms):
+    """Each term with its glossary synonyms, as (name, pattern) alternatives."""
+    return {t: [(a, term_pattern(a)) for a in aliases(wiki, [t])] for t in {t.lower() for t in terms if len(t) >= 2}}
+
+
+def find(wiki, terms):
+    """One search over pages, reports, cards and raw files for terms and their synonyms.
+    Per file: how many of the terms it matches, how many lines, and its best lines.
+    Returns {section: [(path, label, terms matched, lines matched, [(line no, text)])]}."""
+    groups = term_groups(wiki, terms)
+    cards = wiki.cards()
+    by_origin = {str(f.get("origin", "")): sid for sid, (_, f, _) in cards.items()}
+
+    def scan(path, skip=None):
+        lines, matched = [], set()
+        for n, line in enumerate(read(path).splitlines(), 1):
+            low = line.lower()
+            got = {g for g, alts in groups.items() if any(rx.search(low) for _, rx in alts)}
+            matched |= got
+            if got and not PAGE.match(low.strip()) and not (skip and skip.match(low)):
+                lines.append((len(got), n, line.strip()))
+        best = sorted(sorted(lines, key=lambda l: -l[0])[:3], key=lambda l: l[1])
+        return len(matched), len(lines), [(n, text) for _, n, text in best]
+
+    def title(path):
+        return frontmatter(read(path))[0].get("title", "")
+
+    out = {"pages": [], "reports": [], "cards": [], "raw": []}
+    for section, paths in (("pages", wiki.pages()), ("reports", wiki.reports())):
+        for path in paths:
+            matched, count, best = scan(path)
+            if matched:
+                out[section].append((wiki.rel(path), title(path), matched, count, best))
+    for sid, (path, f, _) in cards.items():
+        matched, count, best = scan(path, re.compile(r"(id|title|origin\w*):"))
+        if matched:
+            label = ", ".join(str(x) for x in (f.get("title"), f.get("trust"), f.get("published") or f.get("captured")) if x)
+            label += f"; superseded by {f['superseded_by']}" if f.get("superseded_by") else ""
+            out["cards"].append((sid, label, matched, count, best))
+    for raw in wiki.raw_files():
+        if raw.suffix.lower() in TEXT:
+            matched, count, best = scan(raw)
+            if matched:
+                out["raw"].append((wiki.rel(raw), by_origin.get(wiki.origin(raw), "no card"), matched, count, best))
+    for rows in out.values():
+        rows.sort(key=lambda r: (-r[2], -r[3], r[0]))
+    return sorted(a for alts in groups.values() for a, _ in alts), out
+
+
+def cmd_find(wiki, args):
+    terms, out = find(wiki, args.terms)
+    print(f"terms: {', '.join(sorted(set(terms)))}")
+    for section, rows in out.items():
+        print(f"\n## {section}: {len(rows)} match")
+        for name, label, matched, count, best in rows[:args.limit]:
+            print(f"{name}  [{label}]  ({matched} of the terms, {count} lines)" if label
+                  else f"{name}  ({matched} of the terms, {count} lines)")
+            for n, text in best if section != "raw" else best[:1]:
+                print(f"  {n}: {text[:args.width]}")
+        if len(rows) > args.limit:
+            print(f"+{len(rows) - args.limit} more: " + ", ".join(r[0] for r in rows[args.limit:args.limit + 40]))
+    unread = catalog_search(wiki, args.terms)[1] if (wiki.wiki / "catalog").is_dir() else []
+    print(f"\n## catalog: {len(unread)} unread page(s) match" + (" (catalog-search lists them)" if unread else ""))
+    print("Next: read the files that matter; `raw-hits` with the same terms shows raw details no card or page has.")
 
 
 def cmd_raw_hits(wiki, args):
@@ -1020,6 +1153,11 @@ def main():
     p.add_argument("--all", action="store_true", help="also show lines whose terms are summarized")
     p.add_argument("--files", type=int, default=10, help="files to show; the rest are named")
     p.set_defaults(fn=cmd_raw_hits)
+    p = sub.add_parser("find", help="search pages, reports, cards and raw files at once, best matches first")
+    p.add_argument("terms", nargs="+")
+    p.add_argument("--limit", type=int, default=12, help="files to show per section; the rest are named")
+    p.add_argument("--width", type=int, default=200, help="characters shown per matching line")
+    p.set_defaults(fn=cmd_find)
     p = sub.add_parser("catalog-search", help="find catalogued (not yet ingested) pages by terms and aliases")
     p.add_argument("terms", nargs="+")
     p.add_argument("--all", action="store_true", help="include pages already ingested")
@@ -1029,11 +1167,15 @@ def main():
     p.add_argument("page", help="page id, url or export file from the catalog line")
     p.add_argument("card", help="the new source card, S-NNNN")
     p.set_defaults(fn=cmd_catalog_mark)
-    p = sub.add_parser("spend", help="cost of a run: exact from a ledger, or estimated from a session log")
+    p = sub.add_parser("spend", help="cost: recent sessions of this workspace, a run's ledger, or one session log")
     p.add_argument("--ledger", help="JSON lines of `claude -p --output-format json` results")
     p.add_argument("--session-id", help="estimate from this Claude Code session's log")
     p.add_argument("--session", help="estimate from this session .jsonl log (path)")
     p.add_argument("--since", help="ISO time; for log estimates, count only messages after it")
+    p.add_argument("--days", type=int, help="this workspace's sessions in the last N days, largest first")
+    p.add_argument("--top", type=int, default=10, help="sessions to list with --days")
+    p.add_argument("--logs", help="with --days: the folder of session logs, if not the default")
+    p.add_argument("--today")
     p.add_argument("--json", action="store_true")
     p.set_defaults(fn=cmd_spend)
     p = sub.add_parser("notes", help="list notes and where their quotes are now")

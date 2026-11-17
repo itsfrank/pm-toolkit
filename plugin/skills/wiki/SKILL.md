@@ -55,6 +55,7 @@ PM can redirect.
 | bringing in a whole area: an acquired company, another team's space, "continue the expand" | `wiki-expand` |
 | whether sources are current, syncing | `wiki-refresh` |
 | cleaning up or checking the wiki | `wiki-lint` |
+| what they spent | run `python3 tools/wiki.py spend --days 7` and summarize: total, share per model, the costliest sessions and what they ran |
 | setting up or upgrading the workspace | `setup` |
 
 If nothing fits, answer the request directly under the workspace rules.

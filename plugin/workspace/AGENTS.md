@@ -16,7 +16,8 @@ with the pm-toolkit skills. Follow these rules for every task.
 - `wiki/catalog/`: one line per page of spaces surveyed by `wiki-expand`, read or not.
   `wiki/watch.md`: the spaces `wiki-refresh` watches for new pages.
 - `wiki/CHEATSHEET.md`: the PM's guide to using the workspace (`/wiki cheatsheet`).
-- `wiki/INDEX.md`: one line per page. Read it first; open only the pages you need.
+- `wiki/INDEX.md`: one line per page. `python3 tools/wiki.py find <terms>` searches pages,
+  reports, cards and raw files at once. Read the index first; open only the pages you need.
 - `wiki/glossary.md`: internal names, acronyms, code names and their synonyms.
 - `wiki/lenses.md`: the coverage checklist used by `coverage-review`.
 - `wiki/review-log.md`: things reviewers caught that we missed. It feeds `lenses.md`.
@@ -88,8 +89,9 @@ with the pm-toolkit skills. Follow these rules for every task.
   `design/` as `ui-mockup` Feedback says, and say what was filed.
 - When the PM shares reviewer feedback, or mentions a question they couldn't answer, use
   `review-feedback` to log it. Offer this unprompted after meetings and reviews.
-- Cost: use the default model for reading, filing and mapping. For `coverage-review`,
-  `critical-review` and final PRD passes, suggest the strongest available model.
+- Cost: the PM picks the session's model (`.claude/settings.json` sets the default); work
+  on it and don't switch it. When the PM asks what they spent, run
+  `python3 tools/wiki.py spend --days 7`.
 - Long or budgeted runs follow "Long runs and handoffs" in `wiki/README.md`: wind down at
   about 80% of the budget, never stop mid-edit, and leave a `HANDOFF.md` for the next agent.
 - Report what you did, which sources you read, and what remains unknown.

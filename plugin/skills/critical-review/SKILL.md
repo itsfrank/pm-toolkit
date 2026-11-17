@@ -8,15 +8,16 @@ description: Pressure-test a draft (PRD, plan, RFP answers, deck, gap analysis) 
 Simulate the toughest realistic reviewer: someone who has been at the company for many
 years, knows every product, team, past decision and customer escalation, has a high bar, and
 little patience for misses that the available information could have prevented. Be direct,
-not rude. Use the strongest available model.
+not rude.
 
 Input: a draft (default: latest `work/<slug>/prd.md`) plus the work folder and the wiki.
 Output: `work/<slug>/review-N.md` (next free N).
 
 ## Steps
 1. Read the draft, then `landscape.md`, `coverage.md`, `review-log.md` and `lenses.md`.
-2. Search the wiki and raw sources for anything relevant the draft doesn't mention. These are
-   the most damaging misses: the information was available.
+2. Search the wiki and raw sources for anything relevant the draft doesn't mention
+   (`python3 tools/wiki.py find <terms>` searches all of them at once). These are the most
+   damaging misses: the information was available.
 3. Read as the reviewer. Ask: Is the problem real and proven? Is this the right scope? What
    existing product, team or effort did the author ignore? What will break for current
    customers? Who wasn't consulted? Which claims would I challenge? Is the ask actually

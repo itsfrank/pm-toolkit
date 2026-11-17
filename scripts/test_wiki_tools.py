@@ -243,7 +243,7 @@ class WikiTools(unittest.TestCase):
         out = subprocess.run([sys.executable, "tools/wiki.py", "spend"], cwd=self.ws, capture_output=True, text=True)
         self.assertNotEqual(out.returncode, 0)
         config = pathlib.Path(self.tmp.name) / "config"
-        msg = {"timestamp": "2026-10-06T10:00:00Z", "message": {"id": "m1", "model": "claude-sonnet-x",
+        msg = {"timestamp": "2026-10-06T10:00:00Z", "message": {"id": "m1", "model": "unpriced-model-x",
                "usage": {"input_tokens": 10, "output_tokens": 5}}}
         log = config / "projects" / "-some-folder" / "sess-1.jsonl"
         log.parent.mkdir(parents=True)
@@ -255,6 +255,32 @@ class WikiTools(unittest.TestCase):
         (s,) = json.loads(out.stdout)
         self.assertEqual((s["source"], s["messages"], s["usd"]), ("estimate", 1, None))
         self.assertTrue(s["file"].endswith("sess-1.jsonl"))
+
+    def test_spend_days_lists_this_workspaces_sessions_largest_first(self):
+        logs = pathlib.Path(self.tmp.name) / "logs"
+
+        def msg(mid, model, day, out, skill=None):
+            content = [{"type": "tool_use", "name": "Skill", "input": {"skill": skill}}] if skill else []
+            return json.dumps({"timestamp": day + "T10:00:00Z", "message": {"id": mid, "model": model, "content": content,
+                               "usage": {"input_tokens": 0, "output_tokens": out, "cache_read_input_tokens": 90000}}})
+        self.write("../logs/small.jsonl", msg("a", "claude-sonnet-x", "2026-10-05", 100000, "pm-toolkit:intake") + "\n")
+        self.write("../logs/big.jsonl", msg("b", "claude-opus-x", "2026-10-06", 100000, "prd") + "\n")
+        self.write("../logs/big/subagents/agent-1.jsonl", msg("c", "claude-haiku-x", "2026-10-06", 100000) + "\n")
+        self.write("../logs/old.jsonl", msg("d", "claude-opus-x", "2026-09-01", 100000) + "\n")
+        (s,) = json.loads(self.run_wiki("spend", "--days", "7", "--logs", str(logs), "--json"))
+        self.assertEqual([(r["session"], r["skills"], r["usd"]) for r in s["sessions"]],
+                         [("big", ["prd"], 2.07), ("small", ["intake"], 1.01)])
+        self.assertEqual((s["usd"], s["sessions"][0]["peak_context"]), (3.08, 90000))
+        self.assertIn("total: $3.08 (estimate", self.run_wiki("spend", "--days", "7", "--logs", str(logs)))
+
+    def test_find_ranks_files_by_terms_matched_across_the_wiki(self):
+        out = self.run_wiki("find", "Fjord", "backup", "--limit", "2")
+        pages, cards, raw = out.split("## pages")[1].split("## cards")[0], out.split("## cards")[1], out.split("## raw")[1]
+        self.assertIn("terms: backup, eu region, fjord", out)  # glossary synonyms are searched too
+        self.assertIn("(2 of the terms", cards.split("## raw")[0].splitlines()[1])
+        self.assertIn("more: ", pages)                      # the rest are named, not dropped
+        self.assertIn("wiki/raw/", raw)
+        self.assertIn("## catalog: 0 unread", out)
 
 
 class DesignTools(unittest.TestCase):

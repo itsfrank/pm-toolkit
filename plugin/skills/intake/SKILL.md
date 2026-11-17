@@ -11,7 +11,8 @@ Output: `work/<slug>/intake.md` and `work/<slug>/questions.md`.
 ## Steps
 1. Read `ask.md`, `wiki/INDEX.md`, `wiki/glossary.md` and `wiki/pages/topics/about-me.md` if
    present. Skim wiki pages whose names or aliases obviously match the ask, and reports in
-   `wiki/reports/INDEX.md` on related topics (overlap scans especially). If read-only
+   `wiki/reports/INDEX.md` on related topics (overlap scans especially);
+   `python3 tools/wiki.py find <the ask's key terms>` lists both. If read-only
    connectors are available, run a few searches for the ask's key terms to spot related
    work in flight; cite what you rely on after saving it (`wiki-ingest`), otherwise list it
    as leads to check. If
