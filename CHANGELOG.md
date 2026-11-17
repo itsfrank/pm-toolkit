@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.6.0 (2026-11-17)
 
 Working without an assistant:
 - The viewer has a **Home** page: what is waiting on you (answer there), what is waiting for
