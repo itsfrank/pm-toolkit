@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+Working without an assistant:
+- The viewer has a **Home** page: what is waiting on you (answer there), what is waiting for
+  the assistant, sources to recheck, pages with conflicts or unsourced facts, recent work.
+- Add documents from the viewer: drop files or paste text. Each is saved as a new file in
+  `wiki/raw/` with a draft card, searchable at once; `wiki-ingest` reads it into the pages
+  later. Leave requests for the next session; `wiki-notes` processes them.
+- Search has its own results page, opened from a box in the top bar: a card per file with
+  its best lines, chips to narrow by kind, and matched words marked on the page you open.
+- Search is ranked and forgiving: other word forms, words as you type them, glossary
+  synonyms, and a retry with the closest spelling. It runs on SQLite's full-text index from
+  the Python standard library; no model, nothing to install. `wiki-ingest` now adds the
+  words people search for to page `aliases` and the glossary.
+- macOS launcher: `serve.py --install-app` adds a "PM Wiki" app to `~/Applications`, so the
+  wiki opens from Spotlight without a terminal. `setup` offers it. **Quit** in the top bar
+  stops the viewer.
+- The viewer refuses requests from other sites: it answers only its own address and accepts
+  writes only from its own page.
+- Three eval cases: a document saved in the viewer, Home page requests, the launcher offer.
+
 Cost:
 - Workspaces start on the mid-size model (`.claude/settings.json`); the PM picks a
   different one per session and every skill follows the session's model. The skills no

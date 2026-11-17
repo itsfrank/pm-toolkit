@@ -9,21 +9,19 @@
 <body>
 <header class="top">
   <button id="toggle-side" class="icon" title="Files" aria-label="Toggle file list">☰</button>
-  <a href="#/" class="brand">PM Wiki</a>
+  <a href="#/home" class="brand">PM Wiki</a>
+  <input id="search" type="search" placeholder="Search everything… ( / )" aria-label="Search">
+  <a href="#/home" class="opt">Home</a>
   <a href="#/wiki/INDEX.md" class="opt">Index</a>
   <a href="#/design/INDEX.md" class="opt">Mockups</a>
   <span id="status" class="opt status"></span>
   <label class="opt"><input type="checkbox" id="uncited"> Highlight uncited</label>
+  <button id="quit" class="opt" title="Close the wiki viewer. Open it again from Applications or with /wiki open.">Quit</button>
   <button id="toggle-notes" class="icon" title="Notes" aria-label="Toggle notes">✎ <span id="note-count">0</span></button>
 </header>
 <div class="layout">
   <nav id="side">
-    <div class="search-row">
-      <input id="search" type="search" placeholder="Search text (Enter)…" aria-label="Search">
-      <button id="clear-x" class="icon" title="Clear search (Esc)" aria-label="Clear search" hidden>✕</button>
-    </div>
     <input id="filter" type="search" placeholder="Filter files…" aria-label="Filter files">
-    <div id="results"></div>
     <div id="tree"></div>
   </nav>
   <main id="main"><article id="doc"></article></main>

@@ -60,6 +60,9 @@ tools/           wiki.py (IDs, cards, lint, freshness, notes), design.py and the
 
 To read the wiki in a browser and leave notes on any line, say `/wiki open` (or run
 `python3 tools/viewer/serve.py --open` in your workspace). It listens on this machine only.
+The viewer needs no AI: it searches the wiki, shows what is waiting on you, and lets you
+answer questions, save documents and leave requests for the next session. On macOS, setup
+can add a "PM Wiki" app so it opens from Spotlight without a terminal.
 
 The wiki follows the "LLM wiki" pattern: the agent writes and maintains pages from raw
 sources, and an index keeps each task's reads small. See [docs/design.md](docs/design.md)

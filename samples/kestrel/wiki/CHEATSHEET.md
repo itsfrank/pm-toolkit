@@ -21,7 +21,15 @@ browser, and `/wiki cheatsheet` shows this page.
 
 ## Reading and notes
 - Open the viewer: `/wiki open` opens it in your browser (it runs only on this computer).
-  `/wiki close` stops it. Without Claude: `python3 tools/viewer/serve.py --open` (Ctrl+C stops it).
+  `/wiki close` stops it. Without Claude: open **PM Wiki** from Applications or Spotlight
+  (ask Claude once to "add the wiki launcher"), and press **Quit** in the top bar to stop it.
+- **Home** shows what is waiting on you and on Claude. You can answer Claude's questions
+  there, drop in a document or paste text to save it, and leave requests for next time.
+  None of that needs Claude running; Claude picks it up when you next work together.
+- Search (the box at the top) finds words, their other forms and the names in the glossary,
+  best matches first; the chips narrow results to pages, sources or originals.
+  It doesn't understand meaning: if a search misses a page, tell Claude which word you
+  tried and it adds it.
 - Select any text and click **Note** to leave a comment. Claude processes notes when you
   say "go through my notes", and tells you when there are open ones.
 - Click a citation like `[S-0012]` to see the source it came from.

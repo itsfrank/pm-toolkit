@@ -21,6 +21,7 @@ Standard library only (Python 3.8+). Run from the workspace root or pass --root.
 
 Dates default to today; set PM_TODAY=YYYY-MM-DD to pin them (the sample and evals do).
 
+The viewer (tools/viewer/serve.py) reuses these functions for its Home page and saved documents.
 Read-only except: cards-from-raw writes new cards, pdf-text writes a PDF's text parts,
 note-status and note-reply append to notes.jsonl, reports-index rewrites wiki/reports/INDEX.md,
 catalog-mark edits one catalog line, lint --fix-index edits wiki/INDEX.md, toolkit-branch
@@ -177,13 +178,15 @@ def guess_card(wiki, raw):
             "origin_id": origin_id, "captured": captured, "recheck_days": recheck}
 
 
-def cmd_cards_from_raw(wiki, args):
+def cards_from_raw(wiki, files=None, dry_run=False):
+    """Draft a card for each raw file that has none. Returns [(id, fields)]."""
     cards = wiki.cards()
     carded = {str(f.get("origin", "")) for _, f, _ in cards.values()}
-    raws = [pathlib.Path(p).resolve() for p in args.files] if args.files else wiki.raw_files()
+    raws = [pathlib.Path(p).resolve() for p in files] if files else wiki.raw_files()
     nums = [int(k[2:]) for k in cards] or [0]
     n = max(nums)
     template = read(wiki.wiki / "sources" / "_TEMPLATE.md")
+    made = []
     for raw in raws:
         fields = guess_card(wiki, raw)
         if fields["origin"] in carded or wiki.origin(raw) != fields["origin"]:
@@ -195,9 +198,15 @@ def cmd_cards_from_raw(wiki, args):
             text = re.sub(rf"^{key}:.*$", f"{key}: {value}".rstrip(), text, count=1, flags=re.M)
         text = re.sub(r"^last_checked:.*$", f"last_checked: {fields['captured']}" if fields["origin_url"]
                       else "last_checked:", text, count=1, flags=re.M)
-        print(f"{sid}  {fields['origin']}  {fields['origin_url'] or '(no origin url)'}")
-        if not args.dry_run:
+        made.append((sid, fields))
+        if not dry_run:
             (wiki.wiki / "sources" / f"{sid}.md").write_text(text, encoding="utf-8")
+    return made
+
+
+def cmd_cards_from_raw(wiki, args):
+    for sid, fields in cards_from_raw(wiki, args.files, args.dry_run):
+        print(f"{sid}  {fields['origin']}  {fields['origin_url'] or '(no origin url)'}")
     if not args.dry_run:
         print("Fill in type, trust, summary, key facts and caveats on each new card.")
 
@@ -626,7 +635,9 @@ def cmd_raw_hits(wiki, args):
 
 def anchor(wiki, note):
     """Find where a note's quote is now. Returns (line or None, how)."""
-    path = wiki.root / note.get("file", "")
+    if not note.get("file"):
+        return None, "request"  # from the viewer's Home page: no page, no quote
+    path = wiki.root / note["file"]
     if not path.is_file():
         return None, "file missing"
     lines = read(path).splitlines()
@@ -660,7 +671,8 @@ def cmd_notes(wiki, args):
         print(json.dumps(rows, indent=2))
         return
     for r in rows:
-        print(f"{r['id']}  [{r['status']}]  {r['file']}:{r['line_now'] or '?'} ({r['anchor']})\n"
+        where = f"{r['file']}:{r['line_now'] or '?'} ({r['anchor']})" if r["file"] else "request (no page)"
+        print(f"{r['id']}  [{r['status']}]  {where}\n"
               f"    quote: {r['quote'][:100]!r}\n    note:  {r['text'][:200]!r}"
               + "".join(f"\n    reply: {t[:200]!r}" for t in r["replies"]))
     print(f"{len(rows)} note(s)")
@@ -754,15 +766,20 @@ def cmd_pdf_text(wiki, args):
         print(f"{len(empty)} pages have no text (scanned images?): read those pages from the PDF.")
 
 
-def cmd_note_reply(wiki, args):
+def note_reply(wiki, note_id, text):
     """Record the PM's answer to a note; the note is open again for wiki-notes."""
-    if args.id not in wiki.notes():
-        sys.exit(f"unknown note id {args.id}")
     now = datetime.datetime.now()
     event = {"type": "note", "id": "N-" + now.strftime("%Y%m%d-%H%M%S-") + secrets.token_hex(2),
-             "parent": args.id, "created": now.isoformat(timespec="seconds"), "text": args.text}
+             "parent": note_id, "created": now.isoformat(timespec="seconds"), "text": text}
     with open(wiki.wiki / "notes.jsonl", "a", encoding="utf-8") as f:
         f.write(json.dumps(event, ensure_ascii=False) + "\n")
+    return event
+
+
+def cmd_note_reply(wiki, args):
+    if args.id not in wiki.notes():
+        sys.exit(f"unknown note id {args.id}")
+    note_reply(wiki, args.id, args.text)
     print(f"{args.id} -> open (reply recorded)")
 
 
@@ -1022,7 +1039,11 @@ def status(wiki, today):
     catalog = catalog_entries(wiki) if (wiki.wiki / "catalog").is_dir() else []
     marker = wiki.root / ".pm-toolkit-version"
     installed = re.search(r"\d+\.\d+(\.\d+)?", read(marker)) if marker.exists() else None
-    empty = not wiki.pages() and not wiki.cards()
+    cards = wiki.cards()
+    empty = not wiki.pages() and not cards
+    # Draft cards (trust still to choose): documents saved but not yet read into the wiki.
+    to_ingest = [{"id": sid, "title": f.get("title", ""), "origin": f.get("origin", "")}
+                 for sid, (_, f, _) in cards.items() if not f.get("trust") or "|" in str(f["trust"])]
     waiting = [{"id": n["id"], "file": n.get("file"), "note": n.get("text", ""),
                 "needs": (n["history"][-1].get("resolution") if n["history"] else "")}
                for n in notes if n["status"] == "needs-info"]
@@ -1032,7 +1053,7 @@ def status(wiki, today):
             "catalog_pages": len(catalog), "catalog_ingested": len([e for e in catalog if e["done"]]),
             "unfinished_runs": sorted(wiki.rel(h.parent) for h in work.glob("*/HANDOFF.md")) if work.is_dir() else [],
             "needs_info_notes": len(waiting), "needs_info": waiting,
-            "sources_due": len(due(wiki, today)),
+            "sources_due": len(due(wiki, today)), "to_ingest": to_ingest,
             "last_lint": last_lint.isoformat() if last_lint else None,
             "lint_due": not empty and (last_lint is None or (today - last_lint).days > 30),
             "recent_reports": reports, "recent_asks": asks}
@@ -1048,6 +1069,9 @@ def cmd_status(wiki, args):
         print(f"  {n['id']} ({n['file']}): {n['note'][:100]!r} needs: {n['needs'][:120]}")
     if s["needs_info"]:
         print('  Record the PM\'s answer with: python3 tools/wiki.py note-reply <id> "<answer>"')
+    if s["to_ingest"]:
+        print(f"Saved documents waiting for wiki-ingest: {len(s['to_ingest'])} "
+              f"({', '.join(c['id'] for c in s['to_ingest'][:8])})")
     print(f"Sources due for a recheck: {s['sources_due']}")
     print(f"Last wiki check: {s['last_lint'] or 'never'}{' (due)' if s['lint_due'] else ''}")
     for a in s["recent_asks"]:

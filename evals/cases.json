@@ -2321,6 +2321,164 @@
       "kind": "capability"
     },
     {
+      "id": "wiki-ingest-viewer-capture",
+      "skill": "wiki-ingest",
+      "core": false,
+      "kind": "capability",
+      "prompt": "I saved a document from the viewer's Home page yesterday. Read it into the wiki (meeting notes I pasted; trust secondary, external_ok no). Work non-interactively: do not stop at checkpoints or wait for answers; record open questions in the files instead.",
+      "fixtures": [
+        {
+          "from": "evals/fixtures/viewer-capture/2026-10-06-cs-weekly-accounts-leaving.md",
+          "to": "wiki/raw/2026-10-06-cs-weekly-accounts-leaving.md"
+        },
+        {
+          "from": "evals/fixtures/viewer-capture/S-0021.md",
+          "to": "wiki/sources/S-0021.md"
+        }
+      ],
+      "output_file": "wiki/sources/S-0021.md",
+      "must_find": [
+        {
+          "id": "VC1",
+          "critical": true,
+          "text": "Finds the saved document on its own (wiki.py status or the draft card) and finishes the existing card S-0021: type meeting-notes (or similar), trust secondary, a summary and key facts; the template's option lists are gone.",
+          "check": {
+            "regex": "(?m)^trust: secondary\\s*$"
+          }
+        },
+        {
+          "id": "VC2",
+          "critical": true,
+          "text": "Files the facts cited [S-0021]: three Growth-plan customers gave notice in September and named missing usage alerts as a reason; two had asked for a warning before an overage invoice and neither request was ticketed."
+        },
+        {
+          "id": "VC3",
+          "critical": true,
+          "text": "Records that no ship date for usage alerts was given (unknown or an open question with someone to ask); states no date."
+        },
+        {
+          "id": "VC4",
+          "critical": false,
+          "text": "Adds search words the notes don't use, such as churn, attrition or cancellations, to the aliases of the page that holds these facts or to the glossary's 'Also called'."
+        },
+        {
+          "id": "VC5",
+          "critical": false,
+          "text": "Reports the card finished, pages created or changed, and open questions."
+        }
+      ],
+      "must_not": [
+        {
+          "id": "VCN1",
+          "text": "Creates a second raw copy or a second source card (S-0022) for the same document.",
+          "check": {
+            "file_exists": "wiki/sources/S-0022.md"
+          }
+        },
+        {
+          "id": "VCN2",
+          "text": "Edits the saved file in wiki/raw/."
+        },
+        {
+          "id": "NX-invent",
+          "text": "Invents a quote, metric, owner, date or approval not in the sources."
+        }
+      ],
+      "notes": "The fixtures are what the viewer writes when the PM pastes text: a new raw file and the draft card cards-from-raw makes for it. Grade the card, the diff of pages and glossary, and the reply."
+    },
+    {
+      "id": "wiki-notes-home-requests",
+      "skill": "wiki-notes",
+      "core": false,
+      "kind": "capability",
+      "prompt": "Process my notes. Work non-interactively: do not stop to ask; record anything that needs me as needs-info or as an open question.",
+      "fixtures": [
+        {
+          "from": "evals/fixtures/home-requests/notes.jsonl",
+          "to": "wiki/notes.jsonl"
+        }
+      ],
+      "output_file": "wiki/notes.jsonl",
+      "must_find": [
+        {
+          "id": "HR1",
+          "critical": true,
+          "text": "Each of the three requests gets exactly one appended status event with a resolution; none is rejected or skipped for having no page or quote."
+        },
+        {
+          "id": "HR2",
+          "critical": true,
+          "text": "The region question (bb01) is answered in its resolution or the reply from the wiki: production runs in us-east-1 [S-0001]; the EU region (eu-central-1) is in beta for new tenants only, not live for everyone [S-0004].",
+          "fact": "F1"
+        },
+        {
+          "id": "HR3",
+          "critical": false,
+          "text": "The on-call remark (bb02) is logged through review-feedback (origin asked) in wiki/review-log.md, and the outcome says so."
+        },
+        {
+          "id": "HR4",
+          "critical": true,
+          "text": "The download request (bb03) is marked needs-info, saying it needs the PM's confirmation in chat; nothing is fetched."
+        }
+      ],
+      "must_not": [
+        {
+          "id": "HRN1",
+          "text": "Calls a connector, web fetch or any send tool."
+        },
+        {
+          "id": "HRN2",
+          "text": "Rewrites or deletes existing lines in wiki/notes.jsonl."
+        },
+        {
+          "id": "HRN3",
+          "text": "States that EU residency is available to all customers today."
+        },
+        {
+          "id": "NX-invent",
+          "text": "Invents a quote, metric, owner, date or approval not in the sources."
+        }
+      ],
+      "notes": "Requests typed on the viewer's Home page: notes with kind request, an empty file and no quote. Grade the appended status events, review-log.md and the reply."
+    },
+    {
+      "id": "wiki-launcher-offer",
+      "skill": "wiki",
+      "core": false,
+      "kind": "capability",
+      "prompt": "/wiki I'd like to open the wiki from my Mac without starting Claude or a terminal. Can I get an icon for it?",
+      "output_file": "wiki/INDEX.md",
+      "must_find": [
+        {
+          "id": "WL1",
+          "critical": true,
+          "text": "Offers the launcher app: a small \"PM Wiki\" app in ~/Applications that Spotlight finds, added by `python3 tools/viewer/serve.py --install-app`."
+        },
+        {
+          "id": "WL2",
+          "critical": true,
+          "text": "Says it is written outside the workspace and asks the PM to agree before adding it (the PM has not agreed yet in this run)."
+        },
+        {
+          "id": "WL3",
+          "critical": false,
+          "text": "Says the app only starts the local viewer and can be removed by moving it to the Trash."
+        }
+      ],
+      "must_not": [
+        {
+          "id": "WLN1",
+          "text": "Runs serve.py --install-app, or otherwise writes outside the workspace, before the PM agrees."
+        },
+        {
+          "id": "WLN2",
+          "text": "Creates or changes workspace files."
+        }
+      ],
+      "notes": "Grade the reply and the transcript's tool calls. An install into ~/Applications during the run is a failure: the offer needs a yes."
+    },
+    {
       "id": "connector-landscape-eu-residency",
       "skill": "landscape-map",
       "core": false,

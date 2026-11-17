@@ -1,4 +1,5 @@
-// PM wiki viewer: renders workspace markdown, links citations, records highlight notes.
+// PM wiki viewer: renders workspace markdown, links citations, searches, shows what needs
+// attention, and records notes, requests and documents the PM adds.
 // Plain browser JS, no dependencies. All document text is escaped; no raw HTML passthrough.
 "use strict";
 
@@ -16,7 +17,12 @@ async function api(url, opts) {
   if (!r.ok) throw new Error(body.error || r.statusText);
   return body;
 }
-
+// Every write carries a header only this page can send; the server refuses posts without it.
+function post(url, body, headers) {
+  const json = !(body instanceof Blob);
+  return api(url, { method: "POST", body: json ? JSON.stringify(body || {}) : body,
+    headers: Object.assign({ "X-PM-Viewer": "1", "Content-Type": json ? "application/json" : "application/octet-stream" }, headers) });
+}
 // ---------- paths and routing ----------
 function dirname(p) { return p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : ""; }
 function normalize(p) {
@@ -31,7 +37,7 @@ function route() {
   const h = decodeURIComponent(location.hash.replace(/^#\/?/, ""));
   const [path, query] = h.split("?");
   const q = new URLSearchParams(query || "");
-  return { path, line: parseInt(q.get("line") || "0", 10), anchor: q.get("h") || "" };
+  return { path, line: parseInt(q.get("line") || "0", 10), anchor: q.get("h") || "", q: q.get("q") || "", in: q.get("in") || "", hl: q.get("hl") || "" };
 }
 
 // ---------- frontmatter ----------
@@ -67,7 +73,6 @@ function sourceLinks(fields) {
     : '<div class="source-links missing">No source document recorded on this card.</div>';
 }
 function hideTip() { $("tip").hidden = true; }
-function clearSearch() { $("search").value = ""; $("results").innerHTML = ""; $("clear-x").hidden = true; }
 function safeHref(url) {
   const u = url.trim();
   if (/^(https?:|mailto:)/i.test(u)) return { href: u, external: true };
@@ -263,19 +268,81 @@ function drawTree() {
   };
   $("tree").innerHTML = draw(root, "");
 }
-async function search() {
+// ---------- search ----------
+// Results are a page of their own (#/search?q=…&in=pages), so Back returns to them.
+// Matched words arrive wrapped in \u0001…\u0002; everything else is escaped.
+const KINDS = { pages: "Pages", reports: "Reports", sources: "Sources", originals: "Originals", work: "Work", design: "Design", other: "Other" };
+const marked = (t) => esc(t).replace(/\u0001/g, "<mark>").replace(/\u0002/g, "</mark>");
+// A line of markdown as plain text: no heading, list, table or link syntax.
+function plain(t) {
+  return t.replace(/^(\s*([-*+>]|\d+[.)]|#{1,6})\s+)+/, "").replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/^\s*\|\s*|\s*\|\s*$/g, "").replace(/\s*\|\s*/g, " · ").replace(/\*\*|__|`/g, "");
+}
+function hitHref(h, line, words) {
+  return h.path.endsWith(".md") ? '"#/' + esc(h.path) + "?line=" + (line || 0) + (words ? "&hl=" + esc(encodeURIComponent(words)) : "") + '"'
+    : '"' + esc(rawHref(h.path)) + '" target="_blank" rel="noopener noreferrer"';
+}
+function searchHash(q, kind) { return "#/search?q=" + encodeURIComponent(q) + (kind ? "&in=" + kind : ""); }
+async function drawSearch(r) {
+  const key = r.q + "|" + r.in, same = state.searchKey === key && state.path !== "search";
+  Object.assign(state, { path: "search", text: "", notes: [], searchKey: key });
+  document.title = (r.q ? r.q + " · " : "") + "Search · PM Wiki";
+  if (document.activeElement !== $("search")) $("search").value = r.q;
+  drawTree();
+  if (r.q.length < 2) { $("doc").innerHTML = "<h1>Search</h1><p>Type two or more letters in the search box at the top.</p>"; return; }
+  let res;
+  try { res = await api("/api/search?q=" + encodeURIComponent(r.q)); } catch (e) { res = { hits: [], error: e.message }; }
+  const now = route();
+  if (now.path !== "search" || now.q !== r.q || now.in !== r.in) return;        // a newer search has started
+  const counts = {};
+  for (const h of res.hits) counts[h.kind] = (counts[h.kind] || 0) + 1;
+  const chip = (kind, label, n) => '<a class="chip' + (r.in === kind ? " on" : "") + '" href="' + esc(searchHash(r.q, kind)) + '">' + label + " " + n + "</a>";
+  const shown = res.hits.filter((h) => !r.in || h.kind === r.in);
+  const line = (h, l, words) => "<a class=\"ln\" href=" + hitHref(h, l.line, words) + ">" + marked(plain(l.text)) + "</a>";
+  $("doc").innerHTML = "<h1>Search</h1>" + (res.error ? '<p class="err">' + esc(res.error) + "</p>" : "") +
+    '<p class="hint">' + (res.hits.length >= 100 ? "100+" : res.hits.length) + " file" + (res.hits.length === 1 ? "" : "s") +
+    (res.corrected ? " for <b>" + esc(res.corrected) + "</b>; nothing found for “" + esc(r.q) + "”" : " for “" + esc(r.q) + "”") +
+    (res.any ? ", matching some of the words" : "") + ", best matches first</p>" +
+    (res.hits.length ? '<p class="chips">' + chip("", "All", res.hits.length) + Object.keys(KINDS).filter((k) => counts[k]).map((k) => chip(k, KINDS[k], counts[k])).join("") + "</p>" : "") +
+    (shown.map((h) => {
+      const words = Array.from(new Set(h.lines.flatMap((l) => (l.text.match(/\u0001[^\u0002]*/g) || []).map((w) => w.slice(1).toLowerCase())))).slice(0, 8).join(",");
+      const best = h.lines.filter((l) => l.best), more = h.matches - best.length;
+      return '<div class="res"><a class="title" href=' + hitHref(h, (best[0] || {}).line, words) + ">" + esc(h.title) + "</a> " +
+        [KINDS[h.kind] === "Pages" ? h.type || "page" : KINDS[h.kind].toLowerCase().replace(/s$/, ""), h.status].filter(Boolean).map((b) => '<span class="badge">' + esc(b) + "</span>").join(" ") +
+        "<small>" + esc(h.path) + '</small><div class="best">' + best.map((l) => line(h, l, words)).join("") + "</div>" +
+        (more > 0 ? "<details><summary>Show all " + h.matches + " matching lines</summary>" + h.lines.map((l) => line(h, l, words)).join("") +
+          (h.matches > h.lines.length ? '<p class="hint">…and ' + (h.matches - h.lines.length) + " more in the file.</p>" : "") + "</details>" : "") + "</div>";
+    }).join("") || "<p>Nothing found. Try fewer or different words.</p>");
+  $("note-count").textContent = "0";
+  $("note-list").innerHTML = '<li class="empty">Open a page and select text to add a note.</li>';
+  $("main").scrollTop = same ? state.searchTop || 0 : 0;      // coming Back: where she left off
+}
+// Typing replaces the current search in the history, so Back leaves search in one step.
+function runSearch() {
   const q = $("search").value.trim();
-  if (q.length < 2) { clearSearch(); return; }
-  const hits = await api("/api/search?q=" + encodeURIComponent(q));
-  $("results").innerHTML = '<p class="hits-head">' + hits.length + (hits.length >= 50 ? "+" : "") + " match" + (hits.length === 1 ? "" : "es") + "</p>" +
-    (hits.map((h) => '<a class="hit" href="#/' + esc(h.path) + "?line=" + h.line + '"><small>' + esc(h.path) + ":" + h.line + "</small>" + esc(h.text) + "</a>").join("") || "<p>No matches.</p>");
-  $("clear-x").hidden = false;
+  if (route().path === "search") { history.replaceState(null, "", searchHash(q, "")); open(); } else if (q.length >= 2) location.hash = searchHash(q, "");
+}
+// Mark the words a search matched on the page it opened.
+function markWords(list) {
+  for (const m of $("doc").querySelectorAll("mark.find")) { const parent = m.parentNode; m.replaceWith(m.textContent); parent.normalize(); }
+  const words = list.split(",").map((w) => w.trim()).filter((w) => w.length > 1);
+  if (!words.length) return;
+  const rx = new RegExp("(" + words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")", "i");
+  const walker = document.createTreeWalker($("doc"), NodeFilter.SHOW_TEXT), nodes = [];
+  for (let n; (n = walker.nextNode());) if (!n.parentNode.closest(".path, .badges, mark.find") && rx.test(n.nodeValue)) nodes.push(n);
+  for (const n of nodes) {
+    const span = document.createElement("span");
+    span.innerHTML = n.nodeValue.split(rx).map((part, k) => k % 2 ? '<mark class="find">' + esc(part) + "</mark>" : esc(part)).join("");
+    n.replaceWith(...span.childNodes);
+  }
 }
 
 // ---------- document ----------
 async function open() {
   const r = route();
-  if (!r.path) { location.hash = "#/" + home(); return; }
+  if (!r.path) { location.hash = "#/home"; return; }
+  if (r.path === "home") return drawHome();
+  if (r.path === "search") return drawSearch(r);
   if (r.path !== state.path || !state.text) {
     try {
       const f = await api("/api/file?path=" + encodeURIComponent(r.path));
@@ -297,6 +364,7 @@ async function open() {
     drawTree();
     await loadNotes();
   }
+  markWords(r.hl);
   if (r.anchor) {
     const el = document.getElementById(r.anchor);
     if (el) el.scrollIntoView();
@@ -306,10 +374,91 @@ async function open() {
     $("main").scrollTop = 0;
   }
 }
-function home() {
+
+// ---------- home ----------
+const plural = (n, word) => n + " " + word + (n === 1 ? "" : "s");
+const pageLink = (path, label, line) => '<a href="#/' + esc(path) + (line ? "?line=" + line : "") + '">' + esc(label || path) + "</a>";
+const section = (title, body) => body ? "<h2>" + esc(title) + "</h2>" + body : "";
+const bullets = (items) => items.length ? "<ul>" + items.map((i) => "<li>" + i + "</li>").join("") + "</ul>" : "";
+async function drawHome(message) {
+  Object.assign(state, { path: "home", text: "", notes: [] });
+  document.title = "Home · PM Wiki";
+  drawTree();
+  let h;
+  try { h = await api("/api/home"); } catch (e) { h = { error: e.message }; }
+  if (route().path !== "home") return;
+  const s = h.status || {};
   const has = (p) => state.tree.some((f) => f.path === p);
-  return has("wiki/CHEATSHEET.md") ? "wiki/CHEATSHEET.md" : has("wiki/INDEX.md") ? "wiki/INDEX.md" : (state.tree[0] || {}).path || "";
+  const waiting = (s.needs_info || []).map((n) =>
+    '<div class="card" data-id="' + esc(n.id) + '"><div>' + (n.file ? pageLink(n.file) + ": " : "") + "“" + esc(n.note) + "”</div>" +
+    '<div class="needs">' + esc(n.needs || "Needs your answer.") + '</div><textarea rows="2" placeholder="Your answer"></textarea>' +
+    '<button class="reply">Send answer</button></div>').join("");
+  const queued = (h.queued || []).map((n) => (n.file ? pageLink(n.file) + ": " : "") + esc(n.text) +
+    n.replies.map((t) => "<br><small>You answered: " + esc(t) + "</small>").join(""));
+  const saved = (s.to_ingest || []).map((c) => pageLink("wiki/sources/" + c.id + ".md", c.id + " · " + c.title));
+  const stage = (a, st) => /^[\w-]+$/.test(st) && has(a.folder + "/" + st + ".md") ? pageLink(a.folder + "/" + st + ".md", st) : esc(st);
+  const work = (s.recent_asks || []).map((a) => "<b>" + esc(a.folder.replace(/^work\//, "")) + "</b>: " + (a.stages.map((st) => stage(a, st)).join(" · ") || "not started"))
+    .concat((s.recent_reports || []).map((r) => "Report: " + pageLink(r.path, r.title)));
+  $("doc").innerHTML = "<h1>Home</h1>" + (h.error ? '<p class="err">Could not check the wiki: ' + esc(h.error) + "</p>" : "") +
+    (message ? '<p class="done">' + message + "</p>" : "") +
+    '<div class="two"><div class="card"><h3>Add a document</h3><div id="drop" tabindex="0">Drop files here, or click to choose</div>' +
+    '<input id="pick" type="file" multiple hidden><input id="cap-title" type="search" placeholder="Or paste text: give it a title">' +
+    '<textarea id="cap-text" rows="3" placeholder="…and paste the text here"></textarea><button id="cap-save">Save text</button>' +
+    "<p class=\"hint\">Saved to the wiki's originals and searchable right away. The assistant reads it into the pages next time you work with it.</p></div>" +
+    '<div class="card"><h3>Ask for later</h3><textarea id="req-text" rows="5" placeholder="Something for the assistant to do next time: a question, a report, a page to fix."></textarea>' +
+    '<button id="req-save">Add to the list</button><p class="hint">Nothing runs now. The assistant picks up this list when you next say “process my notes”.</p></div></div>' +
+    section("Waiting on you", waiting) +
+    section("Waiting for the assistant", bullets(queued.concat(saved.length ? ["Saved documents to read in: " + saved.join(", ")] : []))) +
+    section("Sources to recheck", bullets((h.due || []).map((d) => pageLink("wiki/sources/" + d.id + ".md", d.id + " · " + d.title) + " <small>" + esc(d.why) + "</small>" +
+      (/^https?:/i.test(d.url) ? ' · <a href="' + esc(d.url) + '" target="_blank" rel="noopener noreferrer">Original ↗</a>' : "")))) +
+    section("Pages with conflicting sources", bullets((h.conflicts || []).map((p) => pageLink(p)))) +
+    section("Pages with facts that have no source", bullets((h.uncited || []).map((u) => pageLink(u.path, u.path, u.line) + " <small>" + plural(u.count, "line") + "</small>"))) +
+    section("Recent work", bullets(work)) +
+    '<p class="hint">' + (has("wiki/CHEATSHEET.md") ? pageLink("wiki/CHEATSHEET.md", "What you can ask the assistant") + " · " : "") +
+    (has("wiki/INDEX.md") ? pageLink("wiki/INDEX.md", "All pages") : "") + "</p>";
+  $("note-count").textContent = "0";
+  $("note-list").innerHTML = '<li class="empty">Open a page and select text to add a note.</li>';
+  $("main").scrollTop = 0;
 }
+async function capture(files) {
+  const done = [];
+  for (const f of files) {
+    try {
+      const r = await post("/api/capture", f, { "X-Filename": encodeURIComponent(f.name) });
+      done.push("Saved " + esc(f.name) + (r.card ? " as " + pageLink("wiki/sources/" + r.card + ".md", r.card) : "") + ".");
+    } catch (e) { done.push('<span class="err">' + esc(f.name) + " was not saved: " + esc(e.message) + "</span>"); }
+  }
+  state.tree = await api("/api/tree");
+  drawHome(done.join("<br>"));
+}
+$("doc").addEventListener("click", async (e) => {
+  if (state.path !== "home") return;
+  const id = e.target.id;
+  try {
+    if (id === "drop") $("pick").click();
+    else if (id === "cap-save" && $("cap-text").value.trim()) {
+      const r = await post("/api/capture", { title: $("cap-title").value, text: $("cap-text").value });
+      state.tree = await api("/api/tree");
+      drawHome("Saved your text" + (r.card ? " as " + pageLink("wiki/sources/" + r.card + ".md", r.card) : "") + ".");
+    } else if (id === "req-save" && $("req-text").value.trim()) {
+      await post("/api/notes", { kind: "request", text: $("req-text").value });
+      drawHome("Added to the assistant's list.");
+    } else if (e.target.classList.contains("reply")) {
+      const card = e.target.closest(".card"), text = card.querySelector("textarea").value.trim();
+      if (!text) return;
+      await post("/api/reply", { id: card.dataset.id, text });
+      drawHome("Answer saved.");
+    } else return;
+    loadStatus();
+  } catch (err) { drawHome('<span class="err">Not saved: ' + esc(err.message) + "</span>"); }
+});
+$("doc").addEventListener("change", (e) => { if (e.target.id === "pick" && e.target.files.length) capture(e.target.files); });
+$("doc").addEventListener("dragover", (e) => { if (e.target.closest("#drop")) { e.preventDefault(); $("drop").classList.add("over"); } });
+$("doc").addEventListener("dragleave", (e) => { if (e.target.id === "drop") e.target.classList.remove("over"); });
+$("doc").addEventListener("drop", (e) => { if (e.target.closest("#drop")) { e.preventDefault(); capture(e.dataTransfer.files); } });
+// A file dropped anywhere else must not replace the viewer with the file.
+window.addEventListener("dragover", (e) => e.preventDefault());
+window.addEventListener("drop", (e) => e.preventDefault());
 async function loadStatus() {
   let s;
   try { s = await api("/api/status"); } catch (e) { return; }
@@ -319,9 +468,10 @@ async function loadStatus() {
   if (s.needs_info_notes) parts.push(s.needs_info_notes + " waiting on you");
   if (s.sources_due) parts.push(s.sources_due + " source" + (s.sources_due > 1 ? "s" : "") + " to recheck");
   if (s.lint_due) parts.push("wiki check due");
+  if ((s.to_ingest || []).length) parts.push(plural(s.to_ingest.length, "saved document") + " to read in");
   if ((s.unfinished_runs || []).length) parts.push(s.unfinished_runs.length + " unfinished run" + (s.unfinished_runs.length > 1 ? "s" : ""));
   $("status").textContent = parts.join(" · ");
-  $("status").title = parts.length ? "Type /wiki in Claude to see and handle these" : "";
+  $("status").title = parts.length ? "See Home for the details. Type /wiki in Claude to handle these." : "";
 }
 function scrollToLine(line) {
   let best = null;
@@ -439,7 +589,7 @@ document.addEventListener("mouseup", (e) => {
   setTimeout(() => {
     const sel = getSelection();
     const btn = $("note-btn");
-    if (!sel.rangeCount || sel.isCollapsed || !$("doc").contains(sel.anchorNode) || !squash(sel.toString())) { btn.hidden = true; return; }
+    if (/^(home|search)$/.test(state.path) || !sel.rangeCount || sel.isCollapsed || !$("doc").contains(sel.anchorNode) || !squash(sel.toString())) { btn.hidden = true; return; }
     const range = sel.getRangeAt(0);
     const block = blockOf(range.startContainer) || $("doc");
     const before = document.createRange();
@@ -478,10 +628,7 @@ $("note-text").addEventListener("keydown", async (e) => {
   if (!text || !state.pending) return;
   const p = state.pending;
   try {
-    await api("/api/notes", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ file: state.path, quote: { exact: p.exact, prefix: p.prefix, suffix: p.suffix }, line: p.line, text }),
-    });
+    await post("/api/notes", { file: state.path, quote: { exact: p.exact, prefix: p.prefix, suffix: p.suffix }, line: p.line, text });
     $("note-box").hidden = true;
     state.pending = null;
     getSelection().removeAllRanges();
@@ -516,9 +663,24 @@ $("toggle-side").onclick = () => document.body.classList.toggle(innerWidth <= 70
 $("toggle-notes").onclick = () => document.body.classList.toggle(innerWidth <= 900 ? "notes-open" : "no-notes");
 $("uncited").onchange = (e) => document.body.classList.toggle("show-uncited", e.target.checked);
 $("filter").oninput = drawTree;
-$("search").addEventListener("keydown", (e) => { if (e.key === "Enter") search(); if (e.key === "Escape") clearSearch(); });
-$("search").addEventListener("input", (e) => { if (!e.target.value.trim()) clearSearch(); });
-$("clear-x").onclick = clearSearch;
+let searchTimer;
+$("search").addEventListener("input", () => { clearTimeout(searchTimer); searchTimer = setTimeout(runSearch, 250); });
+$("search").addEventListener("keydown", (e) => { if (e.key === "Enter") { clearTimeout(searchTimer); runSearch(); } if (e.key === "Escape") e.target.blur(); });
+$("main").addEventListener("scroll", () => { if (state.path === "search") state.searchTop = $("main").scrollTop; });
+// "/" jumps to the search box; the arrow keys walk the results.
+document.addEventListener("keydown", (e) => {
+  const typing = /^(INPUT|TEXTAREA)$/.test(e.target.tagName);
+  if (e.key === "/" && !typing) { e.preventDefault(); $("search").focus(); $("search").select(); return; }
+  if (state.path !== "search" || !/^Arrow(Down|Up)$/.test(e.key) || (typing && e.target.id !== "search")) return;
+  const titles = Array.from($("doc").querySelectorAll(".res > a.title"));
+  const next = titles[titles.indexOf(document.activeElement) + (e.key === "ArrowDown" ? 1 : -1)] || (e.key === "ArrowUp" ? $("search") : null);
+  if (next) { e.preventDefault(); next.focus(); if (next.scrollIntoView) next.scrollIntoView({ block: "nearest" }); }
+});
+$("quit").onclick = async () => {
+  if (!confirm("Close the wiki viewer? Your notes and saved documents are kept.")) return;
+  await post("/api/stop").catch(() => {});
+  document.body.innerHTML = '<p class="closed">The wiki viewer is closed. Open it again from Applications (or Spotlight), or with /wiki open in Claude. You can close this tab.</p>';
+};
 window.addEventListener("hashchange", () => { hideTip(); if (innerWidth <= 700) document.body.classList.remove("side-open"); open(); });
 
 (async () => {

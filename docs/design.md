@@ -82,7 +82,7 @@ A PM shouldn't have to learn eighteen skill names. Most requests arrive in plain
 and Claude matches them to a skill by its description. `/wiki` is the explicit fallback: a
 short router that only runs when typed, so it never adds a hop to ordinary requests. With no
 argument it shows what needs attention; `/wiki cheatsheet` shows the workspace's
-`CHEATSHEET.md`, which the viewer also uses as its home page. Upkeep (notes, rechecks, lint)
+`CHEATSHEET.md`, which the viewer's Home page links to. Upkeep (notes, rechecks, lint)
 is offered by the agent at the start of a session instead of being something the PM must
 remember. Skills stay separate behind the router because each run then loads only the text
 it needs, and each skill can be evaluated on its own.

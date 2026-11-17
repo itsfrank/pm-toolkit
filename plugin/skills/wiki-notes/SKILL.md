@@ -13,6 +13,9 @@ the quoted text, the line then, the commit then, and the note text.
    (`exact`, `moved`, `fuzzy`, `lost`). For `fuzzy` or `lost`, read the page around the old
    line, and `git log -p` for that file since the note's commit if git is available. When the
    PM answers a `needs-info` note in chat, run `wiki.py note-reply <id> "<answer>"`; it reopens.
+   A note listed as `(request)` has no page or quote: the PM typed it on the viewer's Home
+   page. Classify it like any other note, most often as a request or a question, and
+   answer a question in the outcome.
 2. Group notes by page. Read each page once.
 3. Classify each note and act:
    - **Correction** ("this is wrong, it's X"): if a source supports X, fix the page with that

@@ -40,8 +40,14 @@ skill's base directory). If you can't find it, ask the user where they unpacked 
    checklist.
 6. Check `python3 --version` (3.8 or newer). Show the user how to open the viewer: `/wiki open`
    (or `python3 tools/viewer/serve.py --open`). It only listens on this machine, and writes
-   only `wiki/notes.jsonl`. If Python is missing, the skills still work; the scripts' checks are
-   then done by reading.
+   only `wiki/notes.jsonl` and the documents the user adds on its Home page (new files in
+   `wiki/raw/`, each with a draft card). If Python is missing, the skills still work; the
+   scripts' checks are then done by reading.
+   On macOS, offer a launcher so the wiki opens without Claude or a terminal. Only if the
+   user agrees, run `python3 tools/viewer/serve.py --install-app`: it adds a small app,
+   "PM Wiki", to `~/Applications` (Spotlight and Launchpad find it; `--app-name` renames
+   it). Say that it is the one thing written outside the workspace, that it only starts the
+   viewer, and that moving it to the Trash removes it.
 7. Suggest a first session:
    - Save 5–10 core documents into `wiki/raw/` and run `wiki-ingest` on them.
    - Seed the review log: save past feedback (comment exports, post-mortems) and a few

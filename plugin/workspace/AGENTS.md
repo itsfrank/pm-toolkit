@@ -12,7 +12,7 @@ with the pm-toolkit skills. Follow these rules for every task.
   answers).
 - `wiki/reports/`: ad-hoc research reports the PM asked for. Lighter rules; see
   `wiki/README.md`.
-- `wiki/notes.jsonl`: the PM's notes from the viewer, processed by `wiki-notes`.
+- `wiki/notes.jsonl`: the PM's notes and requests from the viewer, processed by `wiki-notes`.
 - `wiki/catalog/`: one line per page of spaces surveyed by `wiki-expand`, read or not.
   `wiki/watch.md`: the spaces `wiki-refresh` watches for new pages.
 - `wiki/CHEATSHEET.md`: the PM's guide to using the workspace (`/wiki cheatsheet`).
@@ -78,9 +78,10 @@ with the pm-toolkit skills. Follow these rules for every task.
 - When the PM asks for research, a comparison or a summary they will want to read later,
   write it as a report with `report`.
 - Upkeep is the agent's job, not the PM's. At the start of a session, run
-  `python3 tools/wiki.py status` once. If there are open notes, sources due for a recheck,
-  a wiki check due (over 30 days) or an upgrade to finish, say so in one line and offer to
-  handle it (`wiki-notes`, `wiki-refresh`, `wiki-lint`, `setup`). Don't repeat the offer in the same session.
+  `python3 tools/wiki.py status` once. If there are open notes, documents the PM saved in
+  the viewer, sources due for a recheck, a wiki check due (over 30 days) or an upgrade to
+  finish, say so in one line and offer to handle it (`wiki-notes`, `wiki-ingest`,
+  `wiki-refresh`, `wiki-lint`, `setup`). Don't repeat the offer in the same session.
 - The PM talks in plain language and may start with `/wiki`. Never require them to know a
   skill name.
 - After a task that taught us something durable (a new product fact, owner, initiative or

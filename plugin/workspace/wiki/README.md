@@ -17,7 +17,8 @@ stay immutable, the agent writes and maintains the pages, and an index keeps rea
    card too: write the notes into `raw/` first.
 3. **File** facts into pages in `pages/`, each fact cited `[S-NNNN]`. Create a page from
    `pages/_TEMPLATE.md` only when no existing page fits.
-4. **Index**: add or update the page's line in `INDEX.md`. Add new terms to `glossary.md`.
+4. **Index**: add or update the page's line in `INDEX.md`. Add new terms to `glossary.md`,
+   and search words (below).
 5. **Lint** periodically (`wiki-lint`): stale pages, uncited claims, conflicts, orphans.
 
 ## Citations
@@ -114,10 +115,25 @@ works in its folder under `work/` and follows these rules:
 - **Resume:** a skill that finds `HANDOFF.md` in its folder continues from it instead of
   starting over, and appends to `LOG.md`.
 
+## Search words
+The viewer's search uses no model: it matches words, their stems and glossary synonyms,
+nothing else. So when a page is created or changed, add the everyday words someone would
+type to find it that its text doesn't use: a page that says "customers leaving" gets
+`churn`. Put them in the page's `aliases`. When the word is another name for a glossary
+term, put it in that term's "Also called" instead, so every search for either finds both.
+Three to six words a page; no words the page already uses.
+
 ## Notes
 The PM annotates rendered pages in the viewer (`python3 tools/viewer/serve.py`). Notes land
 in `notes.jsonl`, an append-only log; `wiki-notes` processes them. Never rewrite or delete
-lines in `notes.jsonl`; record outcomes by appending status events.
+lines in `notes.jsonl`; record outcomes by appending status events. A note with no `file`
+is a request the PM typed on the viewer's Home page.
+
+## Documents added in the viewer
+The PM can drop a file or paste text on the viewer's Home page. The viewer saves it as a new
+file in `raw/` and drafts its card (`type` and `trust` left to choose). Such a document is
+searchable but not yet in any page: `wiki.py status` lists these cards, and `wiki-ingest`
+finishes them.
 
 ## Answers library
 `pages/answers/` holds external answers (RFP, security questionnaire, customer email) the PM

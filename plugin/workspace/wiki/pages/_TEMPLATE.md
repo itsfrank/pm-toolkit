@@ -2,7 +2,7 @@
 type: product | team | person | initiative | customer | competitor | topic | decision | answer
 status: draft
 updated: YYYY-MM-DD
-aliases: []         # other names, code names, acronyms
+aliases: []         # other names, code names, acronyms, and words people search for
 sources: []         # S-NNNN ids used on this page
 ---
 

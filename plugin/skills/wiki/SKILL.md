@@ -11,7 +11,7 @@ Request: $ARGUMENTS
 
 ## 1. Empty request: status
 Run `python3 tools/wiki.py status`. Reply in a few lines: open notes, notes waiting on the
-PM, sources due for a recheck, whether a wiki check is due, recent asks (and their next
+PM, saved documents waiting for `wiki-ingest`, sources due for a recheck, whether a wiki check is due, recent asks (and their next
 stage) and reports, catalog coverage, and unfinished runs (`HANDOFF.md` under `work/`).
 Offer the one or two most useful next actions. End with: "Say
 `/wiki cheatsheet` for what you can ask."
@@ -25,6 +25,8 @@ words. End with a single line of counts from `python3 tools/wiki.py status` (for
 Run `python3 tools/viewer/serve.py --open --detach`. It opens the default browser and keeps
 running after this session ends. If a viewer for this workspace is already running, it only
 opens the browser. Reply with the URL it printed and that `/wiki close` stops it.
+If the PM wants to open the wiki without Claude (an app, an icon, Spotlight), follow the
+launcher offer in `setup` step 6.
 
 ## 4. `close`
 Run `python3 tools/viewer/serve.py --stop` and say what it printed.

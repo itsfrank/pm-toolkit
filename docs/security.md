@@ -13,8 +13,10 @@ network; there are no hooks, background jobs, MCP servers or connectors of its o
 | | Claude Code's session logs, for `wiki.py spend` only (optional) | `~/.claude/projects/` |
 | | connectors the PM already has, if any, read-only by rule | as configured by the PM |
 | **Writes** | wiki pages, source cards, reports, work folders, design memory and mockups, `notes.jsonl` | the workspace folder only |
+| | the viewer itself writes only `notes.jsonl` and documents the PM adds in it: new files in `wiki/raw/` with a draft card, never over an existing file | the workspace folder |
+| | an optional launcher app (macOS), only if the PM agrees: a shell script that starts the viewer | `~/Applications/` |
 | **Never sends** | no email, posts, uploads, tickets or comments (a rule; see below); outputs are drafts the PM copies out | |
-| **Network** | the viewer listens on 127.0.0.1 only; the scripts make no network calls (`design.py render` runs a local headless browser on a local file, if one is installed) | |
+| **Network** | the viewer listens on 127.0.0.1 only, answers only requests addressed to that address, and accepts writes only from its own page; search runs locally with no model; the scripts make no network calls (`design.py render` runs a local headless browser on a local file, if one is installed) | |
 
 What does leave the machine: everything the agent reads or writes goes to the model
 provider as part of the conversation, and connector search queries go to that connector.

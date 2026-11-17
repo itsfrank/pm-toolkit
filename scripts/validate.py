@@ -22,7 +22,7 @@ REQUIRED_WORKSPACE = [
     "wiki/reports/INDEX.md", "wiki/pages/people", "wiki/CHEATSHEET.md", "wiki/catalog/README.md", "wiki/watch.md",
     "tools/prices.json", "tools/wiki.py", "tools/viewer/serve.py", "tools/design.py",
     "design/README.md", "design/INDEX.md", "design/preferences.md",
-    "tools/viewer/README.md",
+    "tools/viewer/README.md", "tools/viewer/search.py",
 ]
 SAMPLES = ROOT / "samples"
 # Convention files every sample workspace keeps identical to the template.

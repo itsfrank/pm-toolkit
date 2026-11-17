@@ -21,7 +21,7 @@ button { font: inherit; color: inherit; background: var(--panel); border: 1px so
 input[type=search], textarea { font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; width: 100%; }
 
 .top { position: sticky; top: 0; z-index: 5; display: flex; gap: 12px; align-items: center; height: 44px; padding: 0 12px; background: var(--panel); border-bottom: 1px solid var(--line); }
-.brand { font-weight: 600; color: var(--text); margin-right: auto; }
+.brand { font-weight: 600; color: var(--text); white-space: nowrap; }
 .opt { font-size: 14px; color: var(--muted); white-space: nowrap; }
 .layout { display: flex; height: calc(100% - 44px); }
 #side { width: 290px; flex: none; overflow: auto; padding: 10px; border-right: 1px solid var(--line); background: var(--panel); font-size: 14px; }
@@ -38,8 +38,19 @@ body.no-side #side, body.no-notes #notes { display: none; }
 .file span.t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
 .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--line); }
 .dot.draft { background: var(--draft); } .dot.reviewed { background: var(--reviewed); }
-#results .hit { display: block; padding: 3px 4px; border-bottom: 1px solid var(--line); color: var(--text); }
-#results .hit small { color: var(--muted); display: block; }
+.top #search { flex: 1; max-width: 460px; min-width: 90px; margin-right: auto; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 14px; padding: 2px 12px; border: 1px solid var(--line); border-radius: 14px; color: var(--text); }
+.chip.on { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.res { padding: 12px 0; border-bottom: 1px solid var(--line); }
+.res a.title { font-size: 1.12em; font-weight: 600; }
+.res small { display: block; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.res .ln { display: block; color: var(--text); padding: 2px 8px; margin-top: 4px; border-left: 2px solid var(--line); overflow-wrap: anywhere; }
+.res .ln:hover { border-color: var(--accent); text-decoration: none; background: var(--panel); }
+.res details { margin-top: 6px; }
+.res summary { cursor: pointer; color: var(--muted); font-size: 14px; }
+.res:has(details[open]) .best { display: none; }
+#doc mark, mark.find { background: var(--hl); color: inherit; border-radius: 2px; }
 
 .badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
 .badge { font-size: 12px; padding: 1px 8px; border-radius: 10px; border: 1px solid var(--line); color: var(--muted); }
@@ -92,9 +103,17 @@ mark.note-hl { background: var(--hl); color: inherit; cursor: pointer; border-ra
   .opt { display: none; }
 }
 .status { color: var(--warn); }
-.search-row { display: flex; gap: 4px; align-items: center; }
-.search-row #search { flex: 1; min-width: 0; }
-.hits-head { font-size: 12px; color: var(--muted); margin: 4px 0; }
 .source-links { margin: 0 0 14px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); font-size: 14px; }
 .source-links.missing { color: var(--warn); }
 img.shot { max-width: 100%; border: 1px solid #ddd; border-radius: 4px; }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.card { padding: 10px 12px; margin-bottom: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+#doc .card h3 { margin: 0 0 8px; }
+.card textarea, .card input { margin-bottom: 6px; }
+.card .needs { color: var(--warn); font-size: 14px; margin: 4px 0; }
+#drop { padding: 18px 10px; margin-bottom: 8px; text-align: center; color: var(--muted); border: 2px dashed var(--line); border-radius: 8px; cursor: pointer; }
+#drop.over { border-color: var(--accent); color: var(--accent); }
+.hint { font-size: 13px; color: var(--muted); margin: 6px 0 0; }
+.done { padding: 6px 10px; border-left: 3px solid var(--reviewed); background: var(--panel); }
+.closed { max-width: 520px; margin: 80px auto; padding: 0 16px; }
+#quit { color: var(--muted); }
