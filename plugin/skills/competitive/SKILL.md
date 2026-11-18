@@ -45,6 +45,7 @@ Every competitive claim on a competitor page is a card:
    where you used it, or why it doesn't bear on the comparison.
 
 ## Rules
+- Save fetched connector pages with `wiki.py save-fetched`, and before you finish add catalog lines for the connector pages you saw and didn't rely on (`AGENTS.md`, Working style).
 - No public mention means `unknown`, never "they don't have it".
 - Flag cards older than 6 months as stale; don't use stale cards externally without rechecking.
 - Customer-reported competitor claims are useful signals but `low` confidence until confirmed.

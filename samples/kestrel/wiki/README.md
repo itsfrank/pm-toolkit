@@ -82,6 +82,12 @@ line per page, so agents can find what the wiki hasn't read yet:
   card it, cite the card, then `python3 tools/wiki.py catalog-mark <id> S-NNNN`.
 - Top-ranked pages get a one-line summary; the long tail may have title, path and labels
   only.
+- Tasks add lines too: connector pages an agent saw but didn't rely on (`AGENTS.md`,
+  Working style).
+- Never catalogue personal spaces, templates (page or document templates), HR and
+  people-management pages, or pages with personal data. Lines added during tasks also leave
+  out pages unrelated to product work (social posts, admin notices). Old meeting notes,
+  retros and archived pages are fine.
 - `watch.md` lists the spaces `wiki-refresh` checks for new or removed pages.
 
 ## Long runs and handoffs

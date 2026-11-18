@@ -126,6 +126,28 @@ def run_agent(case, ws, model, args, mcp):
             "error": "agent reported an error" if res.get("is_error") else None}
 
 
+def run_per_file(case, ws, model, args, mcp):
+    """One session per fixture file (per_file_prompt), then one reconcile session; usage summed."""
+    runs = []
+    for fx in case.get("fixtures", []):
+        runs.append(run_agent(dict(case, prompt=case["per_file_prompt"].format(file=pathlib.Path(fx["to"]).name)),
+                              ws, model, args, mcp))
+        if runs[-1].get("error"):
+            break
+    else:
+        runs.append(run_agent(dict(case, prompt=case["reconcile_prompt"]), ws, args.reconcile_model or model, args, mcp))
+    usage = {}
+    for r in runs:
+        for m, u in (r.get("model_usage") or {}).items():
+            tot = usage.setdefault(m, {})
+            for k, v in u.items():
+                tot[k] = tot.get(k, 0) + v if isinstance(v, (int, float)) and k not in ("contextWindow", "maxOutputTokens") else v
+    return {"reply": runs[-1].get("reply", ""), "cost_usd": sum(r.get("cost_usd") or 0 for r in runs),
+            "turns": sum(r.get("turns") or 0 for r in runs), "model_usage": usage,
+            "sessions": [{"cost_usd": r.get("cost_usd"), "turns": r.get("turns")} for r in runs],
+            "error": next((r["error"] for r in runs if r.get("error")), None)}
+
+
 def find_output(ws, case):
     path = ws / case["output_file"]
     if path.exists():
@@ -396,7 +418,10 @@ def run_case(case, rep, facts, args, outdir):
     mcp, log = connector_config(case, args, run_dir)
     before = snapshot(ws)
     model = args.strong_model if case["skill"] in STRONG_SKILLS else args.model
-    agent = run_agent(case, ws, model, args, mcp)
+    if args.per_file and case.get("per_file_prompt"):
+        agent = run_per_file(case, ws, model, args, mcp)
+    else:
+        agent = run_agent(case, ws, model, args, mcp)
     out = find_output(ws, case)
     if out and out.is_dir():  # a folder output: the files the run created or changed in it
         new = [p for p in sorted(out.rglob("*")) if p.is_file() and before.get(p) != p.read_text(encoding="utf-8", errors="replace")]
@@ -528,6 +553,9 @@ def main():
     ap.add_argument("--case", action="append", default=[])
     ap.add_argument("--model", default="sonnet")
     ap.add_argument("--strong-model", default="opus")
+    ap.add_argument("--per-file", action="store_true",
+                    help="cases with per_file_prompt: one session per fixture, then reconcile_prompt")
+    ap.add_argument("--reconcile-model", default=None, help="model for the reconcile session (default: --model)")
     ap.add_argument("--graders", default="opus,sol", help="comma list of: " + ", ".join(JUDGES))
     ap.add_argument("--repeat", type=int, default=1)
     ap.add_argument("--jobs", type=int, default=3)

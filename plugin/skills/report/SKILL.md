@@ -53,5 +53,6 @@ what clashes, the owners, the status (`open`, `raised`, `resolved`) and what wou
 it. Two accurate sources whose plans clash are an overlap, not a source conflict.
 
 ## Rules
+- Save fetched connector pages with `wiki.py save-fetched`, and before you finish add catalog lines for the connector pages you saw and didn't rely on (`AGENTS.md`, Working style).
 - A report is a snapshot. Say what it doesn't cover.
 - Never send or post a report; the PM shares it.

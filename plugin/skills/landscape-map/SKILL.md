@@ -75,6 +75,7 @@ Catalogued pages that likely matter but weren't read: title, link, why it may ma
 ```
 
 ## Rules
+- Save fetched connector pages with `wiki.py save-fetched`, and before you finish add catalog lines for the connector pages you saw and didn't rely on (`AGENTS.md`, Working style).
 - Absence in the wiki means "unknown", never "doesn't exist". Before writing `(unknown)`,
   run `raw-hits` (or grep `wiki/raw/`) and `catalog-search` for the specific item once more.
 - Report draft proposals (pricing, packaging, scope) with their content and their status,

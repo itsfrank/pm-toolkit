@@ -273,6 +273,28 @@ class WikiTools(unittest.TestCase):
         self.assertEqual((s["usd"], s["sessions"][0]["peak_context"]), (3.08, 90000))
         self.assertIn("total: $3.08 (estimate", self.run_wiki("spend", "--days", "7", "--logs", str(logs)))
 
+    def test_save_fetched_copies_the_latest_fetch_verbatim_and_never_overwrites(self):
+        logs = pathlib.Path(self.tmp.name) / "logs"
+        page = {"page": {"id": "4801", "url": "https://docs.example/pages/4801"}, "body": "# Tiers\n\n| a | b |\n|---|---|\n"}
+
+        def fetch(uid, text):
+            use = {"message": {"content": [{"type": "tool_use", "id": uid, "name": "mcp__docs__get_page", "input": {"id": "4801"}}]}}
+            res = {"message": {"content": [{"type": "tool_result", "tool_use_id": uid, "content": [{"type": "text", "text": text}]}]}}
+            return json.dumps(use) + "\n" + json.dumps(res) + "\n"
+        self.write("../logs/s1.jsonl", fetch("t1", "old text"))
+        self.write("../logs/s1/subagents/agent-1.jsonl", fetch("t2", json.dumps(page)))
+        os.utime(logs / "s1.jsonl", (1, 1))
+        out = self.run_wiki("save-fetched", "4801", "wiki/raw/2026-10-06-tiers.md", "--logs", str(logs))
+        self.assertIn("from mcp__docs__get_page", out)
+        self.assertEqual((self.ws / "wiki/raw/2026-10-06-tiers.md").read_text(),
+                         "https://docs.example/pages/4801\n\n# Tiers\n\n| a | b |\n|---|---|\n")
+        again = self.run_wiki("save-fetched", "4801", "wiki/raw/2026-10-06-tiers.md", "--logs", str(logs), ok=False)
+        self.assertEqual(again, "")
+        self.run_wiki("save-fetched", "4801", "wiki/pages/x.md", "--logs", str(logs), ok=False)
+        self.assertFalse((self.ws / "wiki/pages/x.md").exists())
+        self.run_wiki("save-fetched", "9999", "wiki/raw/none.md", "--logs", str(logs), ok=False)
+        self.assertFalse((self.ws / "wiki/raw/none.md").exists())
+
     def test_find_ranks_files_by_terms_matched_across_the_wiki(self):
         out = self.run_wiki("find", "Fjord", "backup", "--limit", "2")
         pages, cards, raw = out.split("## pages")[1].split("## cards")[0], out.split("## cards")[1], out.split("## raw")[1]

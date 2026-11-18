@@ -38,5 +38,6 @@ Output: `work/YYYY-MM-DD-mktg-<slug>/review.md` and, if asked, a revised draft.
 6. If writing new copy, use only `ok` claims and phrase `narrow` claims with their scope.
 
 ## Rules
+- Save fetched connector pages with `wiki.py save-fetched`, and before you finish add catalog lines for the connector pages you saw and didn't rely on (`AGENTS.md`, Working style).
 - Positioning and tone are the marketer's call; focus on truth, scope and risk.
 - Never strengthen a claim beyond its source.

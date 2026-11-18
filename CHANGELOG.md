@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+Ingest cost (measurements in `docs/cost.md`, Ingest):
+- `tools/wiki.py save-fetched <page id> <raw file>` saves a connector page the agent already
+  fetched, copied exactly from the session log, so the model doesn't retype it: 29% cheaper
+  when filing large pages, and the copies no longer drift. The shared rules and the skills
+  that use a connector point to it; a hand copy remains the fallback.
+- Connector pages an agent saw during a task and didn't rely on get a catalog line, so a
+  later question finds them (`catalog-search`) instead of searching again. What is never
+  catalogued (personal spaces, templates, HR pages, personal data) is listed once in
+  `wiki/README.md`, Catalogs; `wiki-expand` points there.
+- `wiki-ingest` files a batch in one session, up to about 20 documents, and larger batches
+  in fresh sessions of about 20, instead of a subagent per file (4.7 times the cost).
+- Eval cases: a 20-document batch, two single documents, five large connector pages,
+  discovery during a landscape task, and a follow-up question with and without a catalog
+  line. `run_evals.py --per-file` runs one session per fixture file plus a reconcile.
+
 ## 0.6.0 (2026-11-17)
 
 Working without an assistant:

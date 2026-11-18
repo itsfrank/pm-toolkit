@@ -52,6 +52,7 @@ The 3–5 cheapest clarifications that would most change the direction.
 ```
 
 ## Rules
+- Save fetched connector pages with `wiki.py save-fetched`, and before you finish add catalog lines for the connector pages you saw and didn't rely on (`AGENTS.md`, Working style).
 - Don't research outside the workspace here; that's `landscape-map`.
 - Every factual statement is cited `[S-NNNN]` or labeled `(inferred)`, `(assumption)`, `(unknown)`.
 - Prefer questions that a single person can answer in one message.

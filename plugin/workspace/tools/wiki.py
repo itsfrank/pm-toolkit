@@ -11,6 +11,7 @@ Standard library only (Python 3.8+). Run from the workspace root or pass --root.
   python3 tools/wiki.py raw-hits TERM [TERM ...] [--all] [--files N]
   python3 tools/wiki.py catalog-search TERM [TERM ...] [--all] [--limit N]
   python3 tools/wiki.py catalog-mark ID_OR_URL S-NNNN
+  python3 tools/wiki.py save-fetched PAGE_ID wiki/raw/YYYY-MM-DD-title.md [--url URL]
   python3 tools/wiki.py spend [--days N] [--ledger FILE] [--session-id ID [--since ISO_TIME]] [--json]
   python3 tools/wiki.py notes [--all] [--json]
   python3 tools/wiki.py note-status ID STATUS --resolution TEXT [--by NAME]
@@ -24,9 +25,10 @@ Dates default to today; set PM_TODAY=YYYY-MM-DD to pin them (the sample and eval
 The viewer (tools/viewer/serve.py) reuses these functions for its Home page and saved documents.
 Read-only except: cards-from-raw writes new cards, pdf-text writes a PDF's text parts,
 note-status and note-reply append to notes.jsonl, reports-index rewrites wiki/reports/INDEX.md,
-catalog-mark edits one catalog line, lint --fix-index edits wiki/INDEX.md, toolkit-branch
+catalog-mark edits one catalog line, save-fetched writes one new raw file, lint --fix-index edits wiki/INDEX.md, toolkit-branch
 commits to the git branch `pm-toolkit` (and, with --baseline, records a merge on the current branch).
-spend --session-id and --days read Claude Code session logs under ~/.claude/projects/ (read-only).
+spend --session-id and --days, and save-fetched, read Claude Code session logs under
+~/.claude/projects/ (read-only).
 """
 import argparse
 import datetime
@@ -324,6 +326,70 @@ def cmd_catalog_mark(wiki, args):
         print(f"{e['catalog']}:{e['line']}  {e['title']} -> {args.card}")
 
 
+def session_folder(wiki):
+    """Where Claude Code keeps this workspace's session logs."""
+    base = pathlib.Path(os.environ.get("CLAUDE_CONFIG_DIR", pathlib.Path.home() / ".claude"))
+    return base / "projects" / re.sub(r"[^A-Za-z0-9]", "-", str(wiki.root))
+
+
+def fetched_page(wiki, page_id, logs=None):
+    """The text of a connector page an agent in this workspace already fetched, read from the
+    session logs (main sessions and subagents). The latest fetch of that page wins.
+    Returns (tool name, text) or None."""
+    folder = pathlib.Path(logs) if logs else session_folder(wiki)
+    files = sorted(list(folder.glob("*.jsonl")) + list(folder.glob("*/subagents/*.jsonl")),
+                   key=lambda p: p.stat().st_mtime)
+    found = None
+    for log in files:
+        uses = {}
+        for line in read(log).splitlines():
+            try:
+                content = (json.loads(line).get("message") or {}).get("content")
+            except (ValueError, AttributeError):
+                continue
+            for b in content if isinstance(content, list) else []:
+                if b.get("type") == "tool_use" and str(b.get("name", "")).startswith("mcp__"):
+                    uses[b.get("id")] = b
+                elif b.get("type") == "tool_result" and b.get("tool_use_id") in uses and not b.get("is_error"):
+                    use = uses[b["tool_use_id"]]
+                    if str(page_id) not in [str(v) for v in (use.get("input") or {}).values()]:
+                        continue
+                    c = b.get("content")
+                    text = c if isinstance(c, str) else "".join(
+                        x.get("text", "") for x in (c or []) if isinstance(x, dict))
+                    spilled = re.search(r"Full output saved to: (\S+)", text)  # large results go to a file
+                    if text.startswith("<persisted-output>") and spilled and pathlib.Path(spilled.group(1)).is_file():
+                        text = read(pathlib.Path(spilled.group(1)))
+                    found = (use.get("name"), text)
+    return found
+
+
+def cmd_save_fetched(wiki, args):
+    """Save a fetched connector page to raw/ exactly as the connector returned it."""
+    dest = (wiki.root / args.dest).resolve()
+    if wiki.wiki / "raw" not in dest.parents:
+        sys.exit("the destination must be under wiki/raw/")
+    if dest.exists():
+        sys.exit(f"{args.dest} exists; raw files are never edited")
+    got = fetched_page(wiki, args.page_id, args.logs)
+    if not got:
+        sys.exit(f"no fetch of page {args.page_id} in this workspace's session logs; save the copy by hand")
+    tool, text = got
+    url, body = args.url or "", text
+    try:
+        data = json.loads(text)
+    except ValueError:
+        data = None
+    if isinstance(data, dict):  # a JSON result: keep the page text, take the URL from its fields
+        meta = data.get("page") if isinstance(data.get("page"), dict) else data
+        body = next((data[k] for k in ("body", "content", "text", "markdown") if isinstance(data.get(k), str)), text)
+        url = url or str(meta.get("url") or "")
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text((f"{url}\n\n" if url else "") + body.strip("\n") + "\n", encoding="utf-8")
+    print(f"saved {wiki.rel(dest)}: {len(body)} characters of page {args.page_id} from {tool}"
+          + ("" if url else " (no URL found: pass --url)"))
+
+
 def ledger_spend(path):
     """Sum a run's ledger: JSON lines, each the result of `claude -p --output-format json`
     (total_cost_usd, and per-model modelUsage including subagents). Exact, not estimated."""
@@ -423,8 +489,7 @@ def log_spend(prices_path, session_id=None, session=None, since=None):
 def recent_spend(wiki, days, today, logs=None):
     """Every Claude Code session of this workspace in the last N days: tokens per model, and per
     session its size, largest context and the skills it ran. Shows where the money goes."""
-    base = pathlib.Path(os.environ.get("CLAUDE_CONFIG_DIR", pathlib.Path.home() / ".claude"))
-    folder = pathlib.Path(logs) if logs else base / "projects" / re.sub(r"[^A-Za-z0-9]", "-", str(wiki.root))
+    folder = pathlib.Path(logs) if logs else session_folder(wiki)
     since = (today - datetime.timedelta(days=days - 1)).isoformat()
     prices_path = wiki.root / "tools" / "prices.json"
     everything, sessions = {}, []
@@ -1191,6 +1256,12 @@ def main():
     p.add_argument("page", help="page id, url or export file from the catalog line")
     p.add_argument("card", help="the new source card, S-NNNN")
     p.set_defaults(fn=cmd_catalog_mark)
+    p = sub.add_parser("save-fetched", help="save a connector page you fetched to raw/ verbatim, from the session log")
+    p.add_argument("page_id")
+    p.add_argument("dest", help="wiki/raw/YYYY-MM-DD-short-title.md")
+    p.add_argument("--url", help="origin URL for the first line, when the fetch result has none")
+    p.add_argument("--logs", help="the folder of session logs, if not the default")
+    p.set_defaults(fn=cmd_save_fetched)
     p = sub.add_parser("spend", help="cost: recent sessions of this workspace, a run's ledger, or one session log")
     p.add_argument("--ledger", help="JSON lines of `claude -p --output-format json` results")
     p.add_argument("--session-id", help="estimate from this Claude Code session's log")

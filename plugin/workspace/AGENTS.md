@@ -13,7 +13,8 @@ with the pm-toolkit skills. Follow these rules for every task.
 - `wiki/reports/`: ad-hoc research reports the PM asked for. Lighter rules; see
   `wiki/README.md`.
 - `wiki/notes.jsonl`: the PM's notes and requests from the viewer, processed by `wiki-notes`.
-- `wiki/catalog/`: one line per page of spaces surveyed by `wiki-expand`, read or not.
+- `wiki/catalog/`: one line per page of spaces surveyed by `wiki-expand`, and of connector
+  pages seen during tasks, read or not.
   `wiki/watch.md`: the spaces `wiki-refresh` watches for new pages.
 - `wiki/CHEATSHEET.md`: the PM's guide to using the workspace (`/wiki cheatsheet`).
 - `wiki/INDEX.md`: one line per page. `python3 tools/wiki.py find <terms>` searches pages,
@@ -86,6 +87,17 @@ with the pm-toolkit skills. Follow these rules for every task.
   skill name.
 - After a task that taught us something durable (a new product fact, owner, initiative or
   acronym), offer to file it with `wiki-ingest`.
+- Save a connector page you fetched to `wiki/raw/` with `python3 tools/wiki.py save-fetched
+  <page id> wiki/raw/YYYY-MM-DD-short-title.md`: it copies the page exactly as fetched, with
+  its URL on the first line, so you don't retype it. If it finds no fetch, or the file isn't
+  the page's text, write the copy yourself.
+- Connector pages you saw while working (fetched, or in search results) that the wiki has no
+  card or catalog line for, and that you didn't rely on: add one catalog line each so a later
+  task can find them, with a one-line summary from what you read or its search snippet. Use
+  `wiki/catalog/<space>.md` for the page's space (if it is new, start it with frontmatter
+  `space`, `source: connector`, `surveyed: <today>`, `coverage: partial`); line format and
+  what to leave out are in "Catalogs" in `wiki/README.md`. Pages you relied on are saved and
+  carded as usual. Say in the reply how many lines you added.
 - When the PM corrects how a product or its design system looks, in any task, update
   `design/` as `ui-mockup` Feedback says, and say what was filed.
 - When the PM shares reviewer feedback, or mentions a question they couldn't answer, use

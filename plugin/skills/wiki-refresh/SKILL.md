@@ -18,7 +18,8 @@ and ask the PM to re-export the ones that matter.
 3. For `unchanged`: set `last_checked` to today on the card. Nothing else.
 4. For `changed`: re-ingest with the default model (not the detection subagent):
    - Save the new content as a new raw file `YYYY-MM-DD-<same-title>.md` with the origin URL
-     at the top. Never edit the old raw file.
+     at the top (`python3 tools/wiki.py save-fetched <page id> <raw file>`). Never edit the
+     old raw file.
    - Create a new card with `supersedes: S-old`; add `superseded_by: S-new` and today's
      `last_checked` to the old card. Write the new card's Key facts as what changed.
    - Re-file: update page facts that changed, citing the new card. Where the new version

@@ -23,10 +23,10 @@ time from `date -u +%Y-%m-%dT%H:%M:%SZ`. Budget may be dollars, tokens or pages.
    modified and size. List a space's pages if the connector can; otherwise sweep searches
    (product names, overview, architecture, roadmap, PRD, glossary, team names) and follow
    child pages, and mark the survey's coverage `partial`.
-2. **Exclude** these entirely (not ranked, not ingested, not catalogued), each listed with
-   its reason: personal spaces, templates (page or document templates), HR and
-   people-management pages, pages with personal data. Rank low but keep: old meeting notes,
-   retros, archived pages.
+2. **Exclude** entirely (not ranked, not ingested, not catalogued), each listed with its
+   reason, the pages "Catalogs" in `wiki/README.md` says never to catalogue: personal
+   spaces, templates, HR and people-management pages, pages with personal data. Rank low but
+   keep: old meeting notes, retros, archived pages.
 3. Rank the rest for ingest, highest first: overviews and landing pages; product and
    architecture docs; glossaries and team pages; roadmaps, PRDs and integration plans;
    policies and limits; the rest. Within a rank, prefer recent and heavily linked pages.
@@ -44,7 +44,8 @@ time from `date -u +%Y-%m-%dT%H:%M:%SZ`. Budget may be dollars, tokens or pages.
 - Budget given: continue within it. Log the choices you made as questions in `LOG.md`.
 
 ## 4. Ingest (default model, subagents in batches of about five)
-Ingest in rank order with `wiki-ingest` rules: raw copy with the origin URL on top, a card
+Ingest in rank order with `wiki-ingest` rules: raw copy with the origin URL on top (fetched
+pages via `python3 tools/wiki.py save-fetched`), a card
 with `origin_url`, `origin_id`, `origin_version`, `last_checked`, `recheck_days`, and
 `## Contents` for long pages. On cards of pages that predate the acquisition or reorg, add a
 caveat with the date. After each batch: `python3 tools/wiki.py spend` (`--ledger
