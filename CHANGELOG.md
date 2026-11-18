@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.7.0 (2026-11-18)
 
 Ingest cost (measurements in `docs/cost.md`, Ingest):
 - `tools/wiki.py save-fetched <page id> <raw file>` saves a connector page the agent already

@@ -43,7 +43,7 @@ import subprocess
 import sys
 import tempfile
 
-VERSION = "0.6.0"  # the toolkit release these tools came with; keep equal to plugin.json
+VERSION = "0.7.0"  # the toolkit release these tools came with; keep equal to plugin.json
 CITE = re.compile(r"\[(S-\d{4}[^\]]*)\]")
 SID = re.compile(r"S-\d{4}")
 LABELS = ("(inferred)", "(assumption)", "(unknown)")
