@@ -19,7 +19,7 @@ REQUIRED_WORKSPACE = [
     "AGENTS.md", "CLAUDE.md", "work/README.md",
     "wiki/README.md", "wiki/INDEX.md", "wiki/glossary.md", "wiki/lenses.md",
     "wiki/review-log.md", "wiki/sources/_TEMPLATE.md", "wiki/pages/_TEMPLATE.md",
-    "wiki/reports/INDEX.md", "wiki/pages/people", "wiki/CHEATSHEET.md", "wiki/catalog/README.md", "wiki/watch.md",
+    "wiki/reports/INDEX.md", "wiki/pages/people", "wiki/pages/people/_TEMPLATE.md", "wiki/CHEATSHEET.md", "wiki/catalog/README.md", "wiki/watch.md",
     "tools/prices.json", "tools/wiki.py", "tools/viewer/serve.py", "tools/design.py",
     "design/README.md", "design/INDEX.md", "design/preferences.md",
     "tools/viewer/README.md", "tools/viewer/search.py",

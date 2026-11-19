@@ -3954,6 +3954,14 @@
           "id": "SH6",
           "text": "Updates INDEX.md for the created or changed pages.",
           "critical": false
+},
+        {
+          "id": "SH7",
+          "text": "Creates or updates people pages for Katarina Voss (Head of Data Platform, budget sponsor for the Govern pilot) and Emil Strand (Security Engineering, owns the audit log export request), with work facts only, cited, and lists them in INDEX.md.",
+          "critical": false,
+          "check": {
+            "regex": "### (?:NEW|CHANGED) wiki/pages/people/(?:katarina-voss|emil-strand)"
+          }
         }
       ],
       "must_not": [

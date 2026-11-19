@@ -38,7 +38,26 @@ stay immutable, the agent writes and maintains the pages, and an index keeps rea
 ## People pages
 `pages/people/<first-last>.md` records work facts only: role, team, what they own, what to
 ask them about, decisions they made or approved. Each fact is cited. No opinions about the
-person, no personal details, no performance commentary.
+person, no personal details, no performance commentary. Start from
+`pages/people/_TEMPLATE.md`.
+
+When to create one: a person gets a page once a source names them with a role, an
+ownership or a decision, and they are likely to come up again: they own a product,
+initiative or decision, are a decision-maker or approver, or are someone to ask. Create it
+in the same pass that files the fact; don't leave the person only as a line inside another
+page. A name that appears once in passing, with no role, gets no page.
+
+When to update: every time a later source adds, changes or contradicts a work fact about
+them (new role or team, ownership, decision). Add the fact cited; put a conflicting one
+under `## Conflicts`. Teams and initiatives link to the person page instead of repeating
+what it says.
+
+Unresolved names: sources often give a first name only. Don't guess the surname. If one
+page or source makes the person identifiable (same team and role), use that page. Otherwise
+create `pages/people/<first-name>-unresolved.md` (or add to an existing page), list the
+name as an alias, record each mention cited, and put the open question under
+`## Open questions`: full name, role, team, who might know. When the name is resolved,
+rename the file to `<first-last>.md`, keep the old form as an alias, and fix links.
 
 ## Reports
 `reports/YYYY-MM-DD-slug.md` holds research the PM asked for: comparisons, overlap and
