@@ -335,7 +335,8 @@ def session_folder(wiki):
 def fetched_page(wiki, page_id, logs=None):
     """The text of a connector page an agent in this workspace already fetched, read from the
     session logs (main sessions and subagents). The latest fetch of that page wins.
-    Returns (tool name, text) or None."""
+    A result too large for the log names the file it was saved to; that file is read instead.
+    Returns (tool name, text, characters the notice reported or None) or None."""
     folder = pathlib.Path(logs) if logs else session_folder(wiki)
     files = sorted(list(folder.glob("*.jsonl")) + list(folder.glob("*/subagents/*.jsonl")),
                    key=lambda p: p.stat().st_mtime)
@@ -357,11 +358,23 @@ def fetched_page(wiki, page_id, logs=None):
                     c = b.get("content")
                     text = c if isinstance(c, str) else "".join(
                         x.get("text", "") for x in (c or []) if isinstance(x, dict))
-                    spilled = re.search(r"Full output saved to: (\S+)", text)  # large results go to a file
-                    if text.startswith("<persisted-output>") and spilled and pathlib.Path(spilled.group(1)).is_file():
-                        text = read(pathlib.Path(spilled.group(1)))
-                    found = (use.get("name"), text)
+                    found = (use.get("name"),) + spilled_result(text)
     return found
+
+
+def spilled_result(text):
+    """Follow a notice that a large result was saved to a file, in either wording:
+    `<persisted-output> ... Full output saved to: PATH` or
+    `Error: result (N characters) exceeds maximum allowed tokens. Output has been saved to PATH`.
+    Returns (text, characters reported or None); the notice itself when the file is gone."""
+    head = text[:2000]
+    if not (text.startswith("<persisted-output>") or "exceeds maximum" in head):
+        return text, None
+    size = re.search(r"\(([\d,]+) characters\)", head)
+    size = int(size.group(1).replace(",", "")) if size else None
+    path = re.search(r"saved to:? (\S+)", head)
+    path = pathlib.Path(path.group(1).rstrip(".,;:)")) if path else None
+    return (read(path) if path and path.is_file() else text), size
 
 
 def cmd_save_fetched(wiki, args):
@@ -374,7 +387,13 @@ def cmd_save_fetched(wiki, args):
     got = fetched_page(wiki, args.page_id, args.logs)
     if not got:
         sys.exit(f"no fetch of page {args.page_id} in this workspace's session logs; save the copy by hand")
-    tool, text = got
+    tool, text, size = got
+    if text.lstrip().startswith(("Error:", "<persisted-output>")):
+        sys.exit(f"the fetch of page {args.page_id} is an error or a notice that the result was too large, not the page: "
+                 "fetch it again or save the copy by hand")
+    if size and len(text) < size * 0.9:
+        sys.exit(f"the fetch of page {args.page_id} reported {size} characters and only {len(text)} were found: "
+                 "fetch it again or save the copy by hand")
     url, body = args.url or "", text
     try:
         data = json.loads(text)

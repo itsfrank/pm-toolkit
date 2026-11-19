@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+Fixes:
+- `tools/wiki.py save-fetched` saved a connector's "result exceeds maximum allowed tokens.
+  Output has been saved to PATH" notice as the page. It now reads the saved file for that
+  wording as well as `<persisted-output>`, and refuses, with a message, when only an error
+  or a notice is left or the text found is shorter than the size the notice reported.
+
 ## 0.7.0 (2026-11-18)
 
 Ingest cost (measurements in `docs/cost.md`, Ingest):
