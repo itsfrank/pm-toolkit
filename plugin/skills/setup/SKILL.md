@@ -33,6 +33,10 @@ skill's base directory). If you can't find it, ask the user where they unpacked 
    - Your role, product area and the products you're responsible for.
    - Teams you work with most and the main decision-makers.
    - Which documents you can save locally to seed the wiki (specs, decks, roadmaps, notes).
+   For each decision-maker or close collaborator the user names, offer a people page from
+   `wiki/pages/people/_TEMPLATE.md` (work facts only, cited to the `about-me` source or
+   marked as the user's own statement); first-name-only entries follow the unresolved-name
+   rule in `wiki/README.md`. Link them from `about-me`.
 5. Ask whether the organization has review checklists (launch readiness, design review,
    security or privacy review questionnaires, a PRD template). If the user saves them into
    `wiki/raw/`, card them and add their items as probes under the matching lenses in
