@@ -37,6 +37,8 @@ do the judgment checks below by reading.
 12. **Reports:** reports missing the required header, and reports older than 60 days that
     pages or answers seem to rely on.
 13. **People pages:** opinions or personal details that don't belong (see `wiki/README.md`).
+    Also people named on 3+ pages or cited in 2+ sources with no page (suggest creating
+    one), and unresolved-name pages whose name a later source now resolves.
 14. **Open notes:** count of open and `needs-info` notes; suggest `wiki-notes`.
 15. **Catalogs:** lines already carded but not ticked, ticks pointing at missing cards
     (both mechanical), and catalogued pages that recent work folders listed as unread

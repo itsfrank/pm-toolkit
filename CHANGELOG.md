@@ -8,6 +8,13 @@ Fixes:
   wording as well as `<persisted-output>`, and refuses, with a message, when only an error
   or a notice is left or the text found is shorter than the size the notice reported.
 
+People pages are created and kept current:
+- `wiki/README.md` says when a person gets a page (a role, ownership or decision, likely to
+  come up again), when to update it, and how to record a first-name-only mention as an
+  unresolved name with an open question. New `wiki/pages/people/_TEMPLATE.md`.
+- `wiki-ingest` creates or updates person pages as it files; `setup` offers pages for the
+  decision-makers the user names; `wiki-lint` flags people named often with no page.
+
 ## 0.7.0 (2026-11-18)
 
 Ingest cost (measurements in `docs/cost.md`, Ingest):
