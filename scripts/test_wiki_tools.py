@@ -295,6 +295,30 @@ class WikiTools(unittest.TestCase):
         self.run_wiki("save-fetched", "9999", "wiki/raw/none.md", "--logs", str(logs), ok=False)
         self.assertFalse((self.ws / "wiki/raw/none.md").exists())
 
+    def test_save_fetched_follows_a_spilled_result_and_refuses_a_notice(self):
+        logs, spill = pathlib.Path(self.tmp.name) / "logs", pathlib.Path(self.tmp.name) / "spill.json"
+        doc = {"id": "d7", "name": "Roadmap", "content": "# Roadmap\n\n" + "Ship the beta. " * 300}
+        spill.write_text(json.dumps(doc))
+
+        def fetch(name, text):
+            use = {"message": {"content": [{"type": "tool_use", "id": "t1", "name": "mcp__drive__get_file", "input": {"id": "d7"}}]}}
+            res = {"message": {"content": [{"type": "tool_result", "tool_use_id": "t1", "content": text}]}}
+            self.write(f"../logs/{name}.jsonl", json.dumps(use) + "\n" + json.dumps(res) + "\n")
+        notices = [f"Error: result ({len(spill.read_text()):,} characters) exceeds maximum allowed tokens. "
+                   f"Output has been saved to {spill}\nUse offset and limit to read it in parts.",
+                   f"<persisted-output>\nOutput too large.\nFull output saved to: {spill}\n</persisted-output>"]
+        for n, notice in enumerate(notices):
+            fetch("s", notice)
+            self.run_wiki("save-fetched", "d7", f"wiki/raw/doc-{n}.md", "--logs", str(logs))
+            self.assertEqual((self.ws / f"wiki/raw/doc-{n}.md").read_text(), doc["content"].strip("\n") + "\n")
+        spill.write_text(json.dumps(doc)[:1000])  # the file holds less than the notice reported
+        fetch("s", notices[0])
+        self.run_wiki("save-fetched", "d7", "wiki/raw/short.md", "--logs", str(logs), ok=False)
+        spill.unlink()  # the file is gone: only the notice is left
+        fetch("s", notices[0])
+        self.run_wiki("save-fetched", "d7", "wiki/raw/gone.md", "--logs", str(logs), ok=False)
+        self.assertFalse((self.ws / "wiki/raw/short.md").exists() or (self.ws / "wiki/raw/gone.md").exists())
+
     def test_find_ranks_files_by_terms_matched_across_the_wiki(self):
         out = self.run_wiki("find", "Fjord", "backup", "--limit", "2")
         pages, cards, raw = out.split("## pages")[1].split("## cards")[0], out.split("## cards")[1], out.split("## raw")[1]

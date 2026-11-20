@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+Fixes:
+- `tools/wiki.py save-fetched` saved a connector's "result exceeds maximum allowed tokens.
+  Output has been saved to PATH" notice as the page. It now reads the saved file for that
+  wording as well as `<persisted-output>`, and refuses, with a message, when only an error
+  or a notice is left or the text found is shorter than the size the notice reported.
+
 People pages are created and kept current:
 - `wiki/README.md` says when a person gets a page (a role, ownership or decision, likely to
   come up again), when to update it, and how to record a first-name-only mention as an
